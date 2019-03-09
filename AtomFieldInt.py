@@ -1,6 +1,12 @@
 """Stefan Spence 13.11.18
 17.01.18 -- Run to launch UI to calculate stark shifts in Rb/Cs
 
+Version 3: the calculations are in agreement with Arora 2007 when the hyperfine
+splitting can be ignored. However, this version assumes that when hyperfine 
+splitting is relevant, it is much larger than the stark shift, so that the
+stark shift hamiltonian is diagonal in the hyperfine basis (no state mixing).
+This assumption doesn't hold for the excited states.
+
 Simulation of atoms in an optical tweezer.
 1) Formulate the equations for Gaussian beam propagation.
 2) Look at the dipole interaction as a function of laser wavelength and 
@@ -72,12 +78,19 @@ is integer division
 23.01.19 
 write a function to match the figures for polarisability from Arora 2007
 Correct a factor of 1/2 in the polarisability formula to match Arora 2007
+
+29.01.19
+When the hyperfine boolean is True, use the formula from Kien 2013
+
+04.02.19
+use Arora 2007 for hyperfine 
 """
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 from math import factorial 
+from matplotlib.ticker import AutoLocator
 
 # global constants:
 c    = 2.99792458e8  # speed of light in m/s
@@ -249,7 +262,8 @@ class Gauss:
         
         # from these properties we can deduce:
         self.zR = np.pi * beam_waist**2 / wavelength # the Rayleigh range
-        self.E0 = 2/beam_waist * np.sqrt(power / eps0 / c / np.pi) # field amplitude at the origin
+        # average intensity of sinusoidal wave gives the factor of 2
+        self.E0 = 2 * np.sqrt(power / eps0 / c / np.pi)/beam_waist  # field amplitude at the origin
         self.k  = 2 * np.pi / wavelength             # the wave vector
         
     def amplitude(self, x, y, z):
@@ -297,7 +311,12 @@ class dipole:
     
             
     def polarisability(self, wavel=[], mj=None, HF=False, split=False):
-        """Return the polarisability as given Arora 2007 (also see Cooper 2018,
+        """wavel: wavelength (m) - default is self.field.lam
+        mj: used when hyperfine splitting is negligible.
+        HF: Boolean - include hyperfine structure
+        split: Boolean - False gives total polarisability, True splits into
+        scalar, vector, and tensor.
+        Return the polarisability as given Arora 2007 (also see Cooper 2018,
         Mitroy 2010, Kein 2013) assuming that J and mj are good quantum 
         numbers when hyperfine splitting can be neglected, or that F and mf are
         good quantum numbers. Assumes linear polarisation so that the vector
@@ -306,7 +325,7 @@ class dipole:
             omegas = np.array(2*np.pi*c/wavel)# laser frequencies (rad/s)
         else:
             omegas = self.omegas
-        
+         
         # initiate arrays for results
         empty = np.zeros(np.size(omegas))
         aSvals, aVvals, aTvals = empty.copy(), empty.copy(), empty.copy()
@@ -324,40 +343,52 @@ class dipole:
                     Ep = hbar*(self.omega0[i] + omegas + 1j*self.gam[i])
                     Em = hbar*(self.omega0[i] - omegas - 1j*self.gam[i])
                     
-                
                 aS += 1/3. /(2.*self.J + 1.) *self. D0s[i]**2 * (1/Ep + 1/Em)
-                
-                aV += 0.5*(-1)**(self.J + 2 + self.states[i][2]) * np.sqrt(6*self.J
-                    /(self.J + 1) /(2*self.J + 1)) * self.D0s[i]**2 * wigner6j(
-                    1, 1, 1, self.J, self.states[i][2], self.J) * (1/Em - 1/Ep)
-                
-                aT += 2*np.sqrt(5 * self.J * (2*self.J - 1) / 6. /(self.J + 1) /
-                    (2*self.J + 1) / (2*self.J + 3)) * (-1)**(self.J + 
-                    self.states[i][2]) * wigner6j(self.J, 1, self.states[i][2], 
-                    1, self.J, 2) * self.D0s[i]**2 * (1/Ep + 1/Em)
                     
-                i += 1
+                aV += 0.5*(-1)**(self.J + 2 + self.states[i][2]) * np.sqrt(6*self.J
+                    /(self.J + 1.) /(2*self.J + 1.)) * self.D0s[i]**2 * wigner6j(
+                    1, 1, 1, self.J, self.states[i][2], self.J) * (1/Em - 1/Ep)
+                    
+                aT += 2*np.sqrt(5 * self.J * (2*self.J - 1) / 6. /(self.J + 1) /
+                        (2*self.J + 1) / (2*self.J + 3)) * (-1)**(self.J + 
+                        self.states[i][2]) * wigner6j(self.J, 1, self.states[i][2], 
+                        1, self.J, 2) * self.D0s[i]**2 * (1/Ep + 1/Em)
+                    
       
             aSvals[ii] = aS.real  # scalar polarisability
             aVvals[ii] = aV.real  # vector polarisability
             aTvals[ii] = aT.real  # tensor polarisability
-        
-        if split:
-            return (aSvals, aVvals, aTvals)
-        
+
         # combine polarisabilities
-        # NB: currently ignoring vector polarisability as in Arora 2007
+        
         if self.J > 0.5:
-            if HF: # hyperfine splitting is significant
-                return aSvals + np.sqrt((self.J + 1)*(2*self.J + 1)*(2*self.J + 
-                    3)/self.J /(2*self.J - 1)) *(-1)**(self.I + self.J - self.MF
-                    ) * (2*self.F + 1) * wigner6j(self.F, 2, self.F, self.J, 
-                    self.I, self.J) * wigner3j(self.F, 2, self.F, self.MF, 0, 
-                    -self.MF) * aTvals
-                    
+            if HF:  # hyperfine splitting is significant
+                # from Kien 2013: when stark shift << hfs splitting so there isn't mixing of F levels
+                # combine eq 16 and 18 to get the a_nJF in terms of the a_nJ
+                # also assume stark shift << Zeeman splitting so we can use |F,MF> states.
+                aVvals *= -(-1)**(self.J + self.I + self.F) * np.sqrt(self.F * (2*self.F + 1)
+                    *(self.J + 1) *(2*self.J + 1) /self.J /(self.F + 1)) *wigner6j(self.F, 1, self.F, 
+                    self.J, self.I, self.J)
+                
+                # from Arora 2007
+                aTvals *= (-1)**(self.I + self.J - self.MF) * (2*self.F + 1
+                    ) * np.sqrt((self.J + 1) *(2*self.J + 1) *(2*self.J + 3)
+                    /self.J /(2*self.J - 1.)) * wigner3j(self.F, 2, self.F, 
+                    self.MF, 0, -self.MF) * wigner6j(self.F, 2, self.F,
+                    self.J, self.I, self.J)  
+                
+                if split:
+                    return (aSvals, aVvals, aTvals)
+                else:        
+                    return aSvals + aTvals
+                
             else: # hyperfine splitting is ignored
-                return aSvals + aTvals * (3*mj**2 - self.J*(self.J + 1)
-                ) / self.J / (2*self.J - 1)
+                # NB: currently ignoring vector polarisability as in Arora 2007
+                if split:
+                    return (aSvals, aVvals, aTvals)
+                else:
+                    return aSvals + aTvals * (3*mj**2 - self.J*(self.J + 1)
+                        ) / self.J / (2*self.J - 1)
         else:
             # there is no tensor polarisability for the J=1/2 state
             return aSvals
@@ -383,14 +414,15 @@ def getMagicWavelengths(deltaE, E, wavelengths):
     
     return magicWavelengths
      
-def plotStarkShifts():
-    """Use loaded polarisabilities to find the ac Stark Shifts in Rb, Cs"""
+def plotStarkShifts(wavelength = 880e-9,             # laser wavelength in nm
+                    beamwaist = 1e-6,                # beam waist in m
+                    power = 20e-3):                  # power in Watts
+    """Find the ac Stark Shifts in Rb, Cs"""
     # typical optical tweezer parameters:
-    wavelength = 880e-9                 # laser wavelength in nm
-    beamwaist = 1e-6                    # beam waist in m
-    power = 20e-3                       # power in Watts 
     bprop = [wavelength, power, beamwaist] # collect beam properties
     
+    # mass, (L,J,F,MF), bprop, dipole matrix elements (Cm), resonant frequencies (rad/s),
+    # linewidths (rad/s), state labels, nuclear spin, atomic symbol.
     Rb5S = dipole(Rb.m, (0,1/2.,1,1), bprop,
                     Rb.D0S, Rb.w0S, Rb.lwS, Rb.nljS,
                     nuclear_spin = Rb.I,
@@ -459,46 +491,69 @@ def plotStarkShifts():
     plt.show()
     
 def compareArora():
-    """Plot Fig 5 and Fig 7 in Arora et al 2007 to show that the polarisabilities 
+    """Plot Fig. 5 - 8 in Arora et al 2007 to show that the polarisabilities 
     of Rb and Cs without hyperfine levels are correct"""
     # beam properties: wavelength, power, beam waist
-    bprop = [1064e-9, 35e-3, 1.05e-6]
+    # intensity set to 1e10 MW/cm^2
+    bprop = [1064e-9, np.pi*0.5e-2, 1e-6]
     
-    # for some reason to match these graphs the dipole matrix elements have to 
-    # be modified
-    # factor = np.sqrt(2)
-    # Cs.D0P3[37] = Cs.D0P3[37] * factor
-    # Cs.D0P3[74] = Cs.D0P3[74] * factor
     for ATOM in [Rb, Cs]:
-        S = dipole(ATOM.m, (0,1/2.,1,1), bprop,
+        if ATOM == Rb:
+            wavel1 = np.linspace(780, 800, 200)*1e-9
+            Ylim1 = (-8000, 8000)
+            wavel2 = np.linspace(787,794, 200)*1e-9 
+            Ylim2 = (-1000, 1000)
+            FS, FP = 1, 3
+        elif ATOM == Cs:
+            wavel1 = np.linspace(925, 1000, 200)*1e-9
+            Ylim1 = (-1000, 5000)
+            wavel2 = np.linspace(927, 945, 200)*1e-9
+            Ylim2 = (-100, 100)
+            FS, FP = 3, 5
+            
+        S = dipole(ATOM.m, (0,1/2.,FS,FS), bprop,
                         ATOM.D0S, ATOM.w0S, ATOM.lwS, ATOM.nljS,
                         nuclear_spin = ATOM.I,
                         symbol=ATOM.X)
         
-        P3 = dipole(ATOM.m, (1,3/2.,3,3), bprop,
+        P3 = dipole(ATOM.m, (1,3/2.,FP,FP), bprop,
                         ATOM.D0P3, ATOM.w0P3, ATOM.lwP3, ATOM.nljP3,
                         nuclear_spin = ATOM.I,
                         symbol=ATOM.X)
                         
-        if ATOM == Rb:
-            wavel = np.linspace(780, 800, 200)*1e-9
-            Ylim = (-8000, 8000)
-        elif ATOM == Cs:
-            wavel = np.linspace(925, 1000, 200)*1e-9
-            Ylim = (-1000, 5000)
+        # compare polarisability of excited states
         plt.figure()
         plt.title("Polarisability of "+ATOM.X)
-        plt.plot(wavel*1e9, S.polarisability(wavel)/au, 'r', label='s')
-        plt.plot(wavel*1e9, P3.polarisability(wavel,mj=0.5)/au, 'g--', label='p$_{3/2}$, mj=1/2')
-        plt.plot(wavel*1e9, P3.polarisability(wavel,mj=1.5)/au, 'm:', label='p$_{3/2}$, mj=3/2')
+        plt.plot(wavel1*1e9, S.polarisability(wavel1)/au, 'r', label='s')
+        plt.plot(wavel1*1e9, P3.polarisability(wavel1,mj=0.5)/au, 'g--', label='p$_{3/2}$, mj=1/2')
+        plt.plot(wavel1*1e9, P3.polarisability(wavel1,mj=1.5)/au, 'm:', label='p$_{3/2}$, mj=3/2')
         plt.legend()
         plt.xlabel("Wavelength (nm)")
         plt.ylabel("Polarisability (a.u.)")
-        plt.ylim(Ylim)
-        plt.xlim(wavel[0]*1e9, wavel[-1]*1e9)
-        plt.show()
+        plt.ylim(Ylim1)
+        plt.xlim(wavel1[0]*1e9, wavel1[-1]*1e9)
+        
+        # calculate stark shifts between F, MF states
+        mfLS = ['r', 'g--', 'm:', 'c-.', 'k-.', 'y']  # line styles
+        plt.figure()
+        plt.title("AC Stark Shifts for transitions from P$_{3/2}$ m$_F$ to \nthe groundstate in "+ATOM.X)
+        dES = S.acStarkShift(0,0,0, wavel2, HF=True)   # ground state stark shift
+        for MF in range(FP+1):
+            P3.MF = MF
+            dEPMF = P3.acStarkShift(0,0,0, wavel2, HF=True) # excited MF state stark shift
+            plt.plot(wavel2*1e9, (dEPMF - dES)/h/1e6, mfLS[MF], label='m$_F$ = $\pm$'+str(MF))
+        xlims = [wavel2[0]*1e9, wavel2[-1]*1e9]
+        plt.plot(xlims, [0,0], 'k:', alpha=0.4)  #  show where zero is
+        plt.ylim(Ylim2)
+        plt.xlim(xlims)
+        plt.xlabel("Wavelength (nm)")
+        plt.ylabel("Stark Shift (MHz)")
+        plt.legend()
+        
+    plt.show()
+        
+        
     
-
 def getStarkShift(obj):
     """Print the ac Stark Shift for all of the hyperfine levels in a particular
     fine structure state of the atom in dipoleObject"""
@@ -517,10 +572,14 @@ def getStarkShift(obj):
         
     outstring += "\nIf hyperfine splitting is significant:\n"
     for F in range(int(abs(obj.I - obj.J)), int(obj.I + obj.J+1)):
-        if F > 0:
-            obj.F, obj.MF = F, F
-            outstring += "|"+str(F)+","+str(F)+">  : %.5g MHz\n"%(
-                    obj.acStarkShift(0,0,0, obj.field.lam, HF=True)/h/1e6)
+        mfAveShift = 0
+        for MF in range(-F, F+1):
+            obj.F, obj.MF = F, MF
+            mfAveShift += obj.acStarkShift(0,0,0, obj.field.lam, HF=True)/h/1e6
+        outstring += "F = "+str(F)+ ", ave. mF  : %.5g MHz.\t"%(mfAveShift/(2.*F+1.))
+        obj.F, obj.MF = F, F
+        outstring += "|"+str(F)+","+str(F)+">  : %.5g MHz\n"%(
+                obj.acStarkShift(0,0,0, obj.field.lam, HF=True)/h/1e6)
                     
     return outstring
                                                     
@@ -589,70 +648,182 @@ def runGUI():
     resultButton.pack(side = tkinter.BOTTOM)
     
     root.mainloop()
-
-if __name__ == "__main__":
-    print("compare Fung Yin 2016 thesis stark shifts for 85 Rb:")
-    # beam properties: wavelength, power, beam waist
-    bprop = [1064e-9, 35e-3, 1.05e-6]
-    
-    # for the 5S 1/2 ground state:
-    nlj5S = [[5,1,0.5], [5,1,1.5]]              # final states
-    # dipole matrix elements (Cm) - note different definition of DME
-    # (J|d|J) = sqrt(2J + 1) <J|d|J>
-    dme5S = np.array([2.53574447e-29, 3.57770876e-29]) * np.sqrt(2)
-    rwl5S = np.array([794.98, 780.24])*1e-9         # resonant wavelengths (m)
-    w05S = 2*np.pi*c / rwl5S             # resonant wavelengths (rad/s)
-    
-    # for the 5P 1/2 excited state:
-    nlj5P1 = [[4,2,1.5], [5,2,1.5], [6,0,0.5], [6,2,1.5], [7,0,0.5], [8,0,0.5]]
-    dme5P1 = np.array([3.40587727e-29, 1.81107703e-29, 1.75783958e-29, 
-            6.73795221e-30, 6.35609943e-30, 2.12837967e-30,]) * 2
-    rwl5P1 = np.array([1475.86, 762.1, 1323.69, 620.8, 728.2, 607.24])*1e-9
-    w05P1 = 2* np.pi *c / rwl5P1
-    
-    # for the 5P 3/2 excited state:   
-    nlj5P3 = [[4,2,1.5], [4,2,2.5], [5,2,1.5], [5,2,2.5], [6,0,0.5], [6,2,1.5],
-            [6,2,2.5], [7,0,0.5], [8,0,0.5]]
-    dme5P3 = np.array([1.53622915e-29, 4.61519230e-29, 2.79821372e-30, 8.39047079e-30,
-       2.56124969e-29, 2.37486842e-30, 7.03562364e-30, 5.68330890e-30,
-       2.96816442e-30]) * 2
-    rwl5P3 = np.array([1529.26, 1529.37, 776.16, 775.97, 1367.67, 630.1, 
-                630.02, 741.02, 616.13]) * 1e-9
-    w05P3 = 2* np.pi *c / rwl5P3
-           
-    # construct 85 Rb 5S 1/2:     
-    Rb5S = dipole(85*amu, [0,0.5,2,2], bprop, dme5S, w05S, np.zeros(len(dme5S)),
-                    nlj5S, 5/2., "Rb")
-                    
-    # construct 85 Rb 5P 1/2:
-    Rb5P1 = dipole(85*amu, [1,0.5,2,2], bprop, dme5P1, w05P1, np.zeros(len(dme5P1)),
-                    nlj5P1, 5/2., "Rb")
-
-    # construct 85 Rb 5P 3/2:                    
-    Rb5P3 = dipole(85*amu, [1,1.5,2,2], bprop, dme5P3, w05P3, np.zeros(len(dme5P3)),
-                    nlj5P3, 5/2., "Rb")
-    
-    print(getStarkShift(Rb5S))
-    
-    print(getStarkShift(Rb5P1))
-    
-    print(getStarkShift(Rb5P3))
     
     
-    # compare to previous results:
-    Rb5S = dipole(85*amu, (0,1/2.,1,1), bprop,
+def combinedTrap(Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
+                Rbwl = 880e-9, # wavelength of the Rb tweezer trap in m
+                power = 20e-3, # power in W
+                beamwaist = 1e-6): # beam waist in m
+    """Model tweezer traps for Rb and Cs and find the potential each experiences
+    when they're overlapping"""
+    bprop = [Cswl, power, beamwaist] # collect beam properties
+    
+    # For the 1064nm trap:
+    # mass, (L,J,F,MF), bprop, dipole matrix elements (Cm), resonant frequencies (rad/s),
+    # linewidths (rad/s), state labels, nuclear spin, atomic symbol.
+    # groundstate rubidium
+    Rb1064 = dipole(Rb.m, (0,1/2.,1,1), bprop,
                     Rb.D0S, Rb.w0S, Rb.lwS, Rb.nljS,
-                    nuclear_spin = 5/2.,
+                    nuclear_spin = Rb.I,
                     symbol=Rb.X)
-    Rb5P1 = dipole(85*amu, (1,1/2.,1,1), bprop,
+                    
+    # groundstate caesium
+    Cs1064 = dipole(Cs.m, (0,1/2.,4,4), bprop,
+                    Cs.D0S, Cs.w0S, Cs.lwS, Cs.nljS,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)
+                    
+    CsP = dipole(Cs.m, (1,3/2.,5,5), bprop,
+                    Cs.D0P3, Cs.w0P3, Cs.lwP3, Cs.nljP3,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)
+                    
+    # set the power of the traps so that the trap depth experienced by each 
+    # species in the overlapping trap is the same:
+    P880 = (Cs1064.polarisability(Cswl,mj=0.5) - Rb1064.polarisability(Cswl, mj=0.5)) / (Rb1064.polarisability(Rbwl, mj=0.5) - Cs1064.polarisability(Rbwl, mj=0.5)) * power
+    
+    # for the 880nm trap:
+    bprop = [Rbwl, abs(P880), beamwaist]
+    Rb880 = dipole(Rb.m, (0,1/2.,1,1), bprop,
+                    Rb.D0S, Rb.w0S, Rb.lwS, Rb.nljS,
+                    nuclear_spin = Rb.I,
+                    symbol=Rb.X)
+                    
+    Cs880 = dipole(Cs.m, (0,1/2.,3,3), bprop,
+                    Cs.D0S, Cs.w0S, Cs.lwS, Cs.nljS,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)
+                    
+    
+    # in the trap with both tweezers overlapping: 
+    U0 = abs(Rb1064.acStarkShift(0,0,0) + Rb880.acStarkShift(0,0,0))
+    wrRb = np.sqrt(4*U0 / Rb.m / beamwaist**2) /2. /np.pi /1e3
+    wrCs = np.sqrt(4*U0 / Cs.m / beamwaist**2) /2. /np.pi /1e3
+    print("%.0f beam power: %.3g mW\t\t%.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, P880*1e3))
+    print("""In the combined %.0fnm and %.0fnm trap with a depth of %.3g mK the radial trapping frequencies are: 
+Rubidium: %.0f kHz \nCaesium: %.0f kHz"""%(Rbwl*1e9, Cswl*1e9, U0/kB*1e3, wrRb, wrCs))
+    
+    # with just the Cs tweezer trap:
+    URb =abs(Rb1064.acStarkShift(0,0,0))
+    wrRb1064 = np.sqrt(4*URb / Rb.m / beamwaist**2) /2. /np.pi /1e3
+    UCs = abs(Cs1064.acStarkShift(0,0,0))
+    wrCs1064 = np.sqrt(4*UCs / Cs.m / beamwaist**2) /2. /np.pi /1e3
+    print("""\nIn just the %.0fnm trap:
+    Rubidium has trap depth %.3g mK
+                 radial trapping frequency %.0f kHz
+    Caesium has trap depth %.3g mK
+                radial trapping frequency %.0f kHz"""%(Cswl*1e9, URb/kB*1e3, wrRb1064, UCs/kB*1e3, wrCs1064))
+    
+    print(getStarkShift(Cs1064))
+    print(getStarkShift(CsP))
+    
+    # plot merging traps:
+    n = 5   # number of time steps in merging to plot
+    sep = np.linspace(0, 10e-6, n)     # initial separation of the tweezer traps
+    zs = np.linspace(-2, 10, 200)*1e-6 # positions along the beam axis
+    
+    for atoms in [[Rb1064, Rb880], [Cs1064, Cs880]]:
+        plt.figure()
+        plt.subplots_adjust(hspace=0.01)
+        for i in range(n):
+            ax = plt.subplot2grid((n,1), (i,0))
+            if i == 0:
+                ax.set_title("Optical potential experienced by "+atoms[0].X
+                +"\n%.0f beam power: %.3g mW   %.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, P880*1e3))
+            
+            U = (atoms[0].acStarkShift(0,0,zs) + atoms[1].acStarkShift(0,0,zs-sep[n-i-1]))/kB*1e3 # combined potential along the beam axis
+            U1064 = atoms[0].acStarkShift(0,0,zs)/kB*1e3         # potential in the 1064 trap
+            U880 = atoms[1].acStarkShift(0,0,zs-sep[n-i-1])/kB*1e3 # potential in the 880 trap
+            plt.plot(zs*1e6, U, 'k')
+            plt.plot(zs*1e6, U1064, color='tab:orange', alpha=0.6)
+            plt.plot(zs*1e6, U880, color='tab:blue', alpha=0.6)
+            plt.plot([0]*2, [min(U),0], color='tab:orange', linewidth=10, label='%.0f'%(Cswl*1e9), alpha=0.4)
+            plt.plot([sep[n-i-1]*1e6]*2, [min(U),0], color='tab:blue', linewidth=10, label='%.0f'%(Rbwl*1e9), alpha=0.4)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            
+        plt.xlabel('Position ($\mu$m)')
+        ax.set_xticks(sep*1e6)
+        plt.ylabel('Trap Depth (mK)')
+        ax.yaxis.set_major_locator(AutoLocator())
+        
+    plt.show()
+            
+            
+def getMFStarkShifts():
+    """Return the Stark shifts of the MF states for Cs cooling/repump transitions"""
+    
+    print("stark shift of Cs 6S1/2 -> 6P3/2 for different MF states at 1064nm for beam power 6 mW, beam waist 1 micron, giving trap depth 1 mK")
+    bprop = [1064e-9, 6e-3, 1e-6]      # wavelength, beam power, beam waist
+    
+    plt.figure()
+    # colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    colors = ['k', 'r']
+    for F in [3, 4]:
+        for MF in range(-F, F+1):
+            print(" ----- |F = "+str(F)+", m_F = "+str(MF)+">")
+            for MFp in range(MF-1, MF+2):
+                S = dipole(Cs.m, (0,1/2.,F,MF), bprop,
+                    Cs.D0S, Cs.w0S, Cs.lwS, Cs.nljS,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)
+                P = dipole(Cs.m, (1,3/2.,F+1,MFp), bprop,
+                    Cs.D0P3, Cs.w0P3, Cs.lwP3, Cs.nljP3,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)
+                shift = (S.acStarkShift(0,0,0, bprop[0], HF=True) - P.acStarkShift(0,0,0, bprop[0], HF=True))/h/1e6
+                if MF != 0:
+                    deltaMF = (MFp-MF)*np.sign(MF)
+                else:
+                    deltaMF = (MFp-MF)
+                plt.plot(MF, shift, '_', color=colors[F-3], alpha=0.33*(2+deltaMF), markersize=15, linewidth=10)
+                print("|F' = "+str(F+1)+", m_F' = "+str(MFp)+"> : %.5g MHz"%shift)
+                
+    plt.xlabel("$M_F$")  
+    plt.ylabel("AC Stark Shift (MHz)")
+    lines = plt.gca().lines
+    plt.legend(lines[18:24], ['F='+str(f)+', $\Delta M_F=$'+str(-dmf) for f in range(3,5) for dmf in range(-1,2)])
+    plt.show()        
+        
+if __name__ == "__main__":
+    wavelength = 1064e-9 # wavelength in m
+    power = 6e-3 # beam power in W
+    beamwaist = 1e-6 # beam waist in m
+    bprop = [wavelength, power, beamwaist]
+    
+    Rb5P1 = dipole(Rb.m, (1,1/2.,1,1), bprop,
                     Rb.D0P1, Rb.w0P1, Rb.lwP1, Rb.nljP1,
-                    nuclear_spin = 5/2.,
+                    nuclear_spin = Rb.I,
                     symbol=Rb.X)
-    Rb5P3 = dipole(85*amu, (1,3/2.,3,3), bprop,
+    Rb5P3 = dipole(Rb.m, (1,3/2.,1,1), bprop,
                     Rb.D0P3, Rb.w0P3, Rb.lwP3, Rb.nljP3,
-                    nuclear_spin = 5/2.,
-                    symbol=Rb.X)
-    print("----------Previous Results:-----------")
-    print(getStarkShift(Rb5S))
-    print(getStarkShift(Rb5P1))
+                    nuclear_spin = Rb.I,
+                    symbol=Rb.X)               
+    
+    # print(getStarkShift(Rb5P1))
     print(getStarkShift(Rb5P3))
+    print(np.array(Rb5P3.polarisability(795e-9, HF=True, split=True))/au)
+    
+    # combinedTrap(power=6e-3)
+    # getMFStarkShifts()
+                    
+    # compare Kien 2013 Fig 4,5:
+    # wls = [np.linspace(680, 690, 200)*1e-9, np.linspace(930, 940, 200)*1e-9]
+    # ylims = [(-1200, 300), (-3000, 6000)]
+    # for ii in range(2):
+    #     plt.figure()
+    #     plt.title("Cs Polarisabilities. Red: 6S$_{1/2}$, Blue: 6P$_{3/2}$.\nscalar: solid, vector: dashed, tensor: dotted")
+    #     a1 = Cs880.polarisability(wls[ii],mj=0.5,split=True)
+    #     a2 = CSP.polarisability(wls[ii],mj=1.5, split=True)
+    #     ls = ['-', '--', ':']
+    #     for i in range(3):
+    #         plt.plot(wls[ii]*1e9, a1[i]/au, 'r', linestyle=ls[i], label="Cs")
+    #         plt.plot(wls[ii]*1e9, a2[i]/au, 'b', linestyle=ls[i], label="$P_{3/2}$")
+    #     #plt.legend()
+    #     plt.ylim(ylims[ii])
+    #     plt.xlabel("Wavelength (nm)")
+    #     plt.ylabel("Polarisablity (a.u.)")
+    #     plt.show()
+    
+    # plotStarkShifts(wlrange=[800,1100])
+    
