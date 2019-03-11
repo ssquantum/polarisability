@@ -4,12 +4,12 @@ Collecting together the plotting and data handling functions from
 AtomFieldInt_V3.py 04.02.19
 """
 import numpy as np
-import maptplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import os
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 import sys
 sys.path.append('..')
-from AtomFieldInt import dipole, Rb, Cs, c, eps0, h, hbar, a0, e, me, kB, amu, Eh, au
+from AtomFieldInt_V3 import dipole, Rb, Cs, c, eps0, h, hbar, a0, e, me, kB, amu, Eh, au
 from matplotlib.ticker import AutoLocator
    
 def getMagicWavelengths(deltaE, E, wavelengths):
