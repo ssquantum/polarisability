@@ -443,31 +443,28 @@ class dipole:
                             self.J + self.I + F - Fp - MF) * wigner3j(F, 2, 
                             Fp, MF, 0, -MF) * wigner6j(F, 2, Fp, self.J, 
                             self.I, self.J)
-                        
-                        # print(F, Fp, MF, i, j)
-                        # print(wigner3j(F, 2, Fp, MF, 0, -MF))
-                        # print(wigner6j(F, 2, Fp, self.J, self.I, self.J))
-                        # print()
+                   
                         if F == Fp: 
                             # The hyperfine splitting is diagonal in |F,MF>                   
-                            H[i,j] = -0.5 * (aS.real + aT_F.real) * np.abs( 
+                            H[i,j] = -0.25 * (aS.real + aT_F.real) * np.abs( 
                                         self.field.amplitude(x,y,z) )**2 + Vhfs
                         else: 
                             # state mixing is only from the anisotropic polarisability
-                            H[i,j] = -0.5 * aT_F.real * np.abs( self.field.amplitude(x,y,z) )**2
+                            H[i,j] = -0.25 * aT_F.real * np.abs( self.field.amplitude(x,y,z) )**2
                             
         # could fill the rest of H from symmetry: # H = H + H.T - np.diagflat(np.diag(H))
         # diagonalise the Hamiltonian to find the combined shift
         # since it's hermitian np can diagonalise just from the lower traingle
         eigenvalues, eigenvectors = np.linalg.eigh(H, UPLO='L')
         
-        # to get the Stark shift, subtract off the hyperfine shift
-        Hac = eigenvalues - Hhfs
-        
         # note: the diagonalisation in numpy will likely re-order the eigenvectors
         # assume the eigenvector is that closest to the original eigenvector
         indexes = np.argmax(abs(eigenvectors), axis=1)
-        return Hac[indexes], eigenvectors[:,indexes], Hhfs[indexes], F_labels, MF_labels
+
+        # to get the Stark shift, subtract off the hyperfine shift
+        Hac = eigenvalues[indexes] - Hhfs
+        
+        return Hac, eigenvectors[:,indexes], Hhfs, F_labels, MF_labels
         
         
         
@@ -541,7 +538,6 @@ def plotStarkShifts(wavelength = 880e-9,             # laser wavelength in nm
     plt.title("AC Stark Shift in $^{133}$Cs")
     plt.plot(wavels*1e9, dE6S/h*1e-6, 'b--', label='Ground State S$_{1/2}$')
     plt.plot(wavels*1e9, dE6P/h*1e-6, 'r-.', label='Excited State P$_{3/2}$')
-    # plt.plot(wavels*1e9, (dif6P)/h*1e-6, 'k', label='Difference')
     plt.plot([magic6P[0]*1e9]*2, [min(dif6P/h/1e6),max(dif6P/h/1e6)], 'm:',
                 label = 'Magic Wavelength')
     plt.legend()
@@ -555,17 +551,14 @@ def plotStarkShifts(wavelength = 880e-9,             # laser wavelength in nm
     plt.show()
     print("Magic wavelengths at:\n", magic6P)
     
-    
     # ac Stark Shift in Joules:
     dE5S = Rb5S.acStarkShift(0,0,0,wavels, mj=0.5)
     dE5P = Rb5P.acStarkShift(0,0,0,wavels, mj=1.5)
-    dif5P = dE5P - dE5S
 
     plt.figure()
     plt.title("AC Stark Shift in $^{87}$Rb")
     plt.plot(wavels*1e9, dE5S/h*1e-6, 'b--', label='Ground State S$_{1/2}$')
     plt.plot(wavels*1e9, dE5P/h*1e-6, 'r-.', label='Excited State P$_{3/2}$')
-    # plt.plot(wavels*1e9, (dif5P)/h*1e-6, 'k', label='Difference')
     plt.legend()
     plt.ylabel("Stark Shift (MHz)")
     plt.xlabel("Wavelength (nm)")
@@ -621,14 +614,15 @@ def compareArora():
         plt.figure()
         plt.title("AC Stark Shifts for transitions from P$_{3/2}$ |F'=3, m$_F'\\rangle$ to \nthe groundstate in "+ATOM.X)
         ES = np.zeros(len(wavel2))
-        EP3 = np.zeros((FP, len(wavel2)))
+        EP3 = np.zeros((FP+1, len(wavel2)))
         for i in range(len(wavel2)):
-            ES[i], _, _, _, _ = S.diagH(wavel2[i], 0,0,0)  # ground state shift is independent of MF
-            EP3vals, _, _, Fs, MFs = P3.diagH(wavel2[i], 0,0,0) # get eigenvalues of excited state stark shift operator
-            EP3[:,i] = EP3vals[-(2*FP+1):]  # only interested in F' = F
+            ESvals, _, _, _, _ = S.diagH(wavel2[i], 0,0,0)  # ground state shift is independent of MF
+            ES[i] = ESvals[0]
+            EP3vals, _, _, _, _ = P3.diagH(wavel2[i], 0,0,0) # get eigenvalues of excited state stark shift operator
+            EP3[:,i] = EP3vals[-FP-1:]  # only interested in F' = F
             
         for MF in range(FP+1): # the shift only depends on the magnitude of MF
-            plt.plot(wavel2*1e9, (EP3[MF+FP-1] - ES)/h/1e6, mfLS[MF], label='m$_F$ = $\pm$'+str(MF))
+            plt.plot(wavel2*1e9, (EP3[MF] - ES)/h/1e6, mfLS[MF], label='m$_F$ = $\pm$'+str(MF))
         xlims = [wavel2[0]*1e9, wavel2[-1]*1e9]
         plt.plot(xlims, [0,0], 'k:', alpha=0.4)  #  show where zero is
         plt.ylim(Ylim2)
@@ -663,9 +657,9 @@ def getStarkShift(obj):
         indF = np.where(Fs == F)[0][0]
         if i == indF:
             mfAveShift = np.mean(starkEns[indF:indF+2*F+1])
-            outstring += "F = "+str(Fs[i])+ ", ave. mF  : %.5g MHz.\t"%(mfAveShift/(2.*F+1.))
+            outstring += "F = "+str(Fs[i])+ ", ave. mF  : %.5g MHz.\n"%(mfAveShift/h/1e6)
         F = Fs[i]
-        outstring += "|"+str(Fs[i])+","+str(MFs[i])+">  : %.5g MHz\n"%()
+        outstring += "|"+str(Fs[i])+","+str(MFs[i])+">  : %.5g MHz\n"%(starkEns[i]/h/1e6)
                     
     return outstring
                                                     
@@ -758,7 +752,7 @@ def writeTransitionData():
 
 if __name__ == "__main__":
     # beam properties: wavelength, power, beam waist
-    bprop = [1064-9, 35e-3, 1.05e-6]
+    bprop = [1064e-9, 35e-3, 1.05e-6]
     
     Rb5S = dipole(87*amu, (0,1/2.), bprop,
                     Rb.D0S, Rb.w0S, Rb.lwS, Rb.nljS,
@@ -776,13 +770,14 @@ if __name__ == "__main__":
                     symbol=Rb.X,
                     Ahfs = Rb.AhP3,
                     Bhfs = Rb.BhP3)
-    
+
     # eigenvalues of stark shift, eigenvectors, hyperfine splittings, F quantum #, MF quantum #
-    eval5S, evec5S, hfs5S, FS, MFS = Rb5S.diagH(bprop[0], 0, 0, 0)
-    eval5P1, evec5P1, hfs5P1, FP1, MFP1 = Rb5P1.diagH(bprop[0], 0, 0, 0)
-    eval5P3, evec5P3, hfs5P3, FP3, MFP3 = Rb5P3.diagH(bprop[0], 0, 0, 0)
-    print(np.array((FP3, MFP3, eval5P3/h/1e6)).T)
+    # eval5S, evec5S, hfs5S, FS, MFS = Rb5S.diagH(bprop[0], 0, 0, 0)
+    # eval5P1, evec5P1, hfs5P1, FP1, MFP1 = Rb5P1.diagH(bprop[0], 0, 0, 0)
+    # eval5P3, evec5P3, hfs5P3, FP3, MFP3 = Rb5P3.diagH(bprop[0], 0, 0, 0)
+    # print(eval5S[0]/h/1e6, hfs5S[0]/h/1e6)
+    # print(np.array((FP3, MFP3, eval5P3/h/1e6)).T)
     # latexATOMDATA()
     # writeTransitionData()
     # compareArora()
-    # plotStarkShifts()
+    plotStarkShifts()
