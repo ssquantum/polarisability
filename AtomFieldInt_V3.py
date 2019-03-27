@@ -87,6 +87,10 @@ use Arora 2007 for hyperfine
 
 20.03.19
 Also print the polarisability components in getStarkShift()
+
+27.03.19
+When looking at excited states with several possible mj values, average
+over the possible mj values.
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -337,7 +341,7 @@ class dipole:
             aS, aV, aT = 0, 0, 0
             
             # loop over final states
-            for i in range(len(self.states)):                    
+            for i in range(len(self.states)):   
                 if np.size(omegas) > 1:
                     Ep = hbar*(self.omega0[i] + omegas[ii] + 1j*self.gam[i])
                     Em = hbar*(self.omega0[i] - omegas[ii] - 1j*self.gam[i])
@@ -448,11 +452,13 @@ def plotStarkShifts(wavelength = 880e-9,             # laser wavelength in nm
     
     # need a small spacing to resolve the magic wavelengths - so it will run slow
     # to resolve magic wavelengths, take about 10,000 points.
-    wavels = np.linspace(700e-9, 1100e-9, 500) 
+    wavels = np.linspace(800e-9, 950e-9, 500) 
     
     # ac Stark Shift in Joules:
     dE6S = Cs6S.acStarkShift(0,0,0,wavels, mj=0.5, HF=False)
-    dE6P = Cs6P.acStarkShift(0,0,0,wavels, mj=1.5, HF=False)
+    # average over mj states
+    dE6P = 0.5*(Cs6P.acStarkShift(0,0,0,wavels, mj=1.5, HF=False) + 
+        Cs6P.acStarkShift(0,0,0,wavels, mj=0.5, HF=False))
     dif6P = dE6P - dE6S
     
     magic6P = getMagicWavelengths(dif6P, dE6P, wavels)
@@ -478,7 +484,9 @@ def plotStarkShifts(wavelength = 880e-9,             # laser wavelength in nm
     
     # ac Stark Shift in Joules:
     dE5S = Rb5S.acStarkShift(0,0,0,wavels, mj=0.5, HF=False)
-    dE5P = Rb5P.acStarkShift(0,0,0,wavels, mj=1.5, HF=False)
+    # average over mj states
+    dE5P = 0.5*(Rb5P.acStarkShift(0,0,0,wavels, mj=1.5, HF=False) + 
+            Rb5P.acStarkShift(0,0,0,wavels, mj=0.5, HF=False))
     dif5P = dE5P - dE5S
 
     plt.figure()
@@ -670,7 +678,7 @@ def runGUI():
     
 def combinedTrap(Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
                 Rbwl = 880e-9, # wavelength of the Rb tweezer trap in m
-                power = 20e-3, # power in W
+                power = 6e-3, # power in W
                 beamwaist = 1e-6): # beam waist in m
     """Model tweezer traps for Rb and Cs and find the potential each experiences
     when they're overlapping"""
@@ -762,6 +770,7 @@ Rubidium: %.0f kHz \nCaesium: %.0f kHz"""%(Rbwl*1e9, Cswl*1e9, U0/kB*1e3, wrRb, 
             
         plt.xlabel(r'Position ($\mu$m)')
         ax.set_xticks(sep*1e6)
+        plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
         plt.ylabel('Trap Depth (mK)')
         ax.yaxis.set_major_locator(AutoLocator())
         
@@ -800,46 +809,87 @@ def getMFStarkShifts():
     plt.ylabel("AC Stark Shift (MHz)")
     lines = plt.gca().lines
     plt.legend(lines[18:24], ['F='+str(f)+r', $\Delta M_F=$'+str(-dmf) for f in range(3,5) for dmf in range(-1,2)])
-    plt.show()        
+    plt.show()
+
+def compareKien():
+    """compare Kien 2013 Fig 4,5"""
+    bprop =[880e-9,20e-3,1e-6]
+    Cs880 = dipole(Cs.m, (0,1/2.,3,3), bprop,
+                    Cs.D0S, Cs.w0S, Cs.lwS, Cs.nljS,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)
+                    
+    CsP = dipole(Cs.m, (1,3/2.,3,3), bprop,
+                    Cs.D0P3, Cs.w0P3, Cs.lwP3, Cs.nljP3,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)               
+    
+    wls = [np.linspace(680, 690, 200)*1e-9, np.linspace(930, 940, 200)*1e-9]
+    ylims = [(-1200, 300), (-3000, 6000)]
+    for ii in range(2):
+        plt.figure()
+        plt.title("Cs Polarisabilities. Red: 6S$_{1/2}$, Blue: 6P$_{3/2}$.\nscalar: solid, vector: dashed, tensor: dotted")
+        a1 = Cs880.polarisability(wls[ii],mj=0.5,split=True)
+        a2 = 0.5*(np.array(CsP.polarisability(wls[ii],mj=1.5, split=True))+
+            np.array(CsP.polarisability(wls[ii],mj=0.5, split=True)))
+        ls = ['-', '--', ':']
+        for i in range(3):
+            plt.plot(wls[ii]*1e9, a1[i]/au, 'r', linestyle=ls[i], label="Cs")
+            plt.plot(wls[ii]*1e9, a2[i]/au, 'b', linestyle=ls[i], label="$P_{3/2}$")
+        #plt.legend()
+        plt.ylim(ylims[ii])
+        plt.xlabel("Wavelength (nm)")
+        plt.ylabel("Polarisablity (a.u.)")
+        plt.show()
+    
         
 if __name__ == "__main__":
-    # wavelength = 1064e-9 # wavelength in m
-    # power = 6e-3 # beam power in W
-    # beamwaist = 1e-6 # beam waist in m
-    # bprop = [wavelength, power, beamwaist]
+    wavelength = 880e-9 # wavelength in m
+    power = 5e-3 # beam power in W
+    beamwaist = 1e-6 # beam waist in m
+    bprop = [wavelength, power, beamwaist]
     
-    # Rb5P1 = dipole(Rb.m, (1,1/2.,1,1), bprop,
-    #                 Rb.D0P1, Rb.w0P1, Rb.lwP1, Rb.nljP1,
-    #                 nuclear_spin = Rb.I,
-    #                 symbol=Rb.X)
-    # Rb5P3 = dipole(Rb.m, (1,3/2.,1,1), bprop,
-    #                 Rb.D0P3, Rb.w0P3, Rb.lwP3, Rb.nljP3,
-    #                 nuclear_spin = Rb.I,
-    #                 symbol=Rb.X)               
+    Rb5S = dipole(Rb.m, (0,1/2.,1,1), bprop,
+                    Rb.D0S, Rb.w0S, Rb.lwS, Rb.nljS,
+                    nuclear_spin = Rb.I,
+                    symbol=Rb.X)
     
-    # print(getStarkShift(Rb5P1))
-    # print(getStarkShift(Rb5P3))
-    runGUI()
-    # combinedTrap(power=6e-3)
-    # getMFStarkShifts()
+    Rb5P = dipole(Rb.m, (1,3/2.,1,1), bprop,
+                    Rb.D0P3, Rb.w0P3, Rb.lwP3, Rb.nljP3,
+                    nuclear_spin = Rb.I,
+                    symbol=Rb.X)
                     
-    # compare Kien 2013 Fig 4,5:
-    # wls = [np.linspace(680, 690, 200)*1e-9, np.linspace(930, 940, 200)*1e-9]
-    # ylims = [(-1200, 300), (-3000, 6000)]
-    # for ii in range(2):
-    #     plt.figure()
-    #     plt.title("Cs Polarisabilities. Red: 6S$_{1/2}$, Blue: 6P$_{3/2}$.\nscalar: solid, vector: dashed, tensor: dotted")
-    #     a1 = Cs880.polarisability(wls[ii],mj=0.5,split=True)
-    #     a2 = CSP.polarisability(wls[ii],mj=1.5, split=True)
-    #     ls = ['-', '--', ':']
-    #     for i in range(3):
-    #         plt.plot(wls[ii]*1e9, a1[i]/au, 'r', linestyle=ls[i], label="Cs")
-    #         plt.plot(wls[ii]*1e9, a2[i]/au, 'b', linestyle=ls[i], label="$P_{3/2}$")
-    #     #plt.legend()
-    #     plt.ylim(ylims[ii])
-    #     plt.xlabel("Wavelength (nm)")
-    #     plt.ylabel("Polarisablity (a.u.)")
-    #     plt.show()
+    Cs6S = dipole(Cs.m, (0,1/2.,3,3), bprop,
+                    Cs.D0S, Cs.w0S, Cs.lwS, Cs.nljS,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)
+                    
+    Cs6P = dipole(Cs.m, (1,3/2.,3,3), bprop,
+                    Cs.D0P3, Cs.w0P3, Cs.lwP3, Cs.nljP3,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)               
     
+    trap_depth = Rb5S.acStarkShift(0,0,0,wavelength)/kB * 1e3 # in mK at 880nm
+    print("Rb 5S at %.3g nm: \t %.3g mK"%(wavelength*1e9, trap_depth))
+    print("Cs 6S at 1064 nm: \t %.3g mK"%(Cs6S.acStarkShift(0,0,0,1064e-9)/kB*1e3))
+    wavels = np.linspace(750,950,500)*1e-9 # wavelengths in m
+    
+    for STATES in [[Rb5S, Rb5P],[Cs6S, Cs6P]]:
+        plt.figure()
+        plt.title("AC Stark Shift in "+STATES[0].X+"\nbeam power %.3g mW, beam waist %.3g $\mu$m"%(power*1e3,beamwaist*1e6))
+        plt.plot(wavels*1e9, STATES[0].acStarkShift(0,0,0,wavels)/kB*1e3, 'tab:blue', label='Ground S$_{1/2}$')
+        excited_shift = 0.5*(STATES[1].acStarkShift(0,0,0,wavels,mj=0.5) + STATES[1].acStarkShift(0,0,0,wavels,mj=1.5))
+        plt.plot(wavels*1e9, excited_shift/kB*1e3, 'r-.', label='Excited P$_{3/2}$')
+        plt.legend()
+        plt.ylabel("Trap Depth (mK)")
+        plt.xlabel("Wavelength (nm)")
+        plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
+        plt.ylim(-5,5)
+        plt.plot(wavels*1e9, np.zeros(len(wavels)), 'k', alpha=0.25) # show zero crossing
+    plt.show()
+
+    # runGUI()
+    # combinedTrap(Rbwl=820e-9)
+    # getMFStarkShifts()
     # plotStarkShifts(wlrange=[800,1100])
     
