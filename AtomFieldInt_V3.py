@@ -94,6 +94,7 @@ over the possible mj values.
 """
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 import os
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 from math import factorial 
@@ -678,10 +679,22 @@ def runGUI():
     
 def combinedTrap(Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
                 Rbwl = 880e-9, # wavelength of the Rb tweezer trap in m
-                power = 6e-3, # power in W
+                power = 6e-3, # power of Cs tweezer beam in W
+                Rbpower = -1, # power of Rb tweezer beam in W 
                 beamwaist = 1e-6): # beam waist in m
     """Model tweezer traps for Rb and Cs and find the potential each experiences
-    when they're overlapping. Should fix the separate tweezer trap depths to >1mK"""
+    when they're overlapping. Should fix the separate tweezer trap depths to >1mK.
+    We also want Rb to experience a deeper trap from its tweezer than from the Cs
+    tweezer so that there isn't too much heating during merging.
+    args:
+    Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
+    Rbwl = 880e-9, # wavelength of the Rb tweezer trap in m
+    power = 6e-3, # power of Cs tweezer beam in W
+    Rbpower = -1, # power of Rb tweezer beam in W (if < 0 then choose a power
+    such that both species experience the same trap depth when the tweezers are
+    overlapping)
+    beamwaist = 1e-6 # beam waist in m
+    """
     bprop = [Cswl, power, beamwaist] # collect beam properties
     
     # For the 1064nm trap:
@@ -706,10 +719,11 @@ def combinedTrap(Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
                     
     # set the power of the traps so that the trap depth experienced by each 
     # species in the overlapping trap is the same:
-    P880 = (Cs1064.polarisability(Cswl,mj=0.5) - Rb1064.polarisability(Cswl, mj=0.5)) / (Rb1064.polarisability(Rbwl, mj=0.5) - Cs1064.polarisability(Rbwl, mj=0.5)) * power
+    if Rbpower < 0:
+        Rbpower = (Cs1064.polarisability(Cswl,mj=0.5) - Rb1064.polarisability(Cswl, mj=0.5)) / (Rb1064.polarisability(Rbwl, mj=0.5) - Cs1064.polarisability(Rbwl, mj=0.5)) * power
     
     # for the 880nm trap:
-    bprop = [Rbwl, abs(P880), beamwaist]
+    bprop = [Rbwl, abs(Rbpower), beamwaist]
     Rb880 = dipole(Rb.m, (0,1/2.,1,1), bprop,
                     Rb.D0S, Rb.w0S, Rb.lwS, Rb.nljS,
                     nuclear_spin = Rb.I,
@@ -725,7 +739,7 @@ def combinedTrap(Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
     U0 = abs(Rb1064.acStarkShift(0,0,0) + Rb880.acStarkShift(0,0,0))
     wrRb = np.sqrt(4*U0 / Rb.m / beamwaist**2) /2. /np.pi /1e3
     wrCs = np.sqrt(4*U0 / Cs.m / beamwaist**2) /2. /np.pi /1e3
-    print("%.0f beam power: %.3g mW\t\t%.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, P880*1e3))
+    print("%.0f beam power: %.3g mW\t\t%.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, Rbpower*1e3))
     print("""In the combined %.0fnm and %.0fnm trap with a depth of %.3g mK the radial trapping frequencies are: 
 Rubidium: %.0f kHz \nCaesium: %.0f kHz"""%(Rbwl*1e9, Cswl*1e9, U0/kB*1e3, wrRb, wrCs))
     
@@ -751,11 +765,9 @@ Rubidium: %.0f kHz \nCaesium: %.0f kHz"""%(Rbwl*1e9, Cswl*1e9, U0/kB*1e3, wrRb, 
     for atoms in [[Rb1064, Rb880], [Cs1064, Cs880]]:
         plt.figure()
         plt.subplots_adjust(hspace=0.01)
+        
         for i in range(n):
             ax = plt.subplot2grid((n,1), (i,0))
-            if i == 0:
-                ax.set_title("Optical potential experienced by "+atoms[0].X
-                +"\n%.0f beam power: %.3g mW   %.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, P880*1e3))
             
             U = (atoms[0].acStarkShift(0,0,zs) + atoms[1].acStarkShift(0,0,zs-sep[n-i-1]))/kB*1e3 # combined potential along the beam axis
             U1064 = atoms[0].acStarkShift(0,0,zs)/kB*1e3         # potential in the 1064 trap
@@ -767,10 +779,16 @@ Rubidium: %.0f kHz \nCaesium: %.0f kHz"""%(Rbwl*1e9, Cswl*1e9, U0/kB*1e3, wrRb, 
             plt.plot([sep[n-i-1]*1e6]*2, [min(U),0], color='tab:blue', linewidth=10, label='%.0f'%(Rbwl*1e9), alpha=0.4)
             ax.set_xticks([])
             ax.set_yticks([])
+
+            if i == 0:
+                ax.set_title("Optical potential experienced by "+atoms[0].X
+        +"\n%.0f beam power: %.3g mW   %.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, Rbpower*1e3),
+                    pad = 25)
+                plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+        
             
         plt.xlabel(r'Position ($\mu$m)')
         ax.set_xticks(sep*1e6)
-        plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
         plt.ylabel('Trap Depth (mK)')
         ax.yaxis.set_major_locator(AutoLocator())
         
@@ -842,12 +860,13 @@ def compareKien():
         plt.ylabel("Polarisablity (a.u.)")
         plt.show()
     
-        
-if __name__ == "__main__":
-    #plot the st
-    wavelength = 880e-9 # wavelength in m
-    power = 5e-3 # beam power in W
-    beamwaist = 1e-6 # beam waist in m
+
+def check880trap(wavelength = 880e-9,     # wavelength in m
+                 power = 5e-3,            # beam power in W
+                 beamwaist = 1e-6):       # beam waist in m
+    """Plot graphs of the trap depth experienced by Cs around 880nm when 
+    the ground state Rb trap depth is fixed at 1mK. Look at the scattering
+    rates and hence trap lifetimes that are possible."""
     bprop = [wavelength, power, beamwaist]
     
     Rb5S = dipole(Rb.m, (0,1/2.,1,1), bprop,
@@ -884,8 +903,9 @@ if __name__ == "__main__":
 
     ax2 = ax1.twinx()
     # now the power and the wavelength are varied:
-    Ls = ['$S_{1/2}$', '$P_{3/2}$']
-    colors = ['tab:orange', 'tab:green', 'tab:red']
+    Llabels = ['$S_{1/2}$', '$P_{3/2}$']
+    colors = ['tab:orange', 'tab:red', 'tab:green']
+    linestyles = ['-', '-.', ':']
     Cs6SDepth = np.zeros(len(Powers))
     Cs6PDepth = np.zeros(len(Powers))
     Rb5PDepth = np.zeros(len(Powers))
@@ -896,7 +916,8 @@ if __name__ == "__main__":
             res[i] = 0.5*(obj.acStarkShift(0,0,0, wavels[i], mj=1.5) + 
                     obj.acStarkShift(0,0,0, wavels[i], mj=0.5))
         color = colors.pop(0)
-        ax2.plot(wavels*1e9, res*1e3/kB, color=color, label=obj.X+" "+Ls[obj.L])
+        ls = linestyles.pop(0)
+        ax2.plot(wavels*1e9, res*1e3/kB, color=color, label=obj.X+" "+Llabels[obj.L], linestyle=ls)
     ax2.plot(wavels*1e9, np.ones(len(wavels)), 'k--', alpha=0.75, label='Rb $5S_{1/2}$') # show 1 mK limit
     ax2.plot(wavels*1e9, np.zeros(len(wavels)), 'k', alpha=0.1) # show zero crossing    
     ax2.set_ylabel('Trap Depth (mK)', color='tab:orange')
@@ -907,24 +928,57 @@ if __name__ == "__main__":
 
     I = 2*power / np.pi / beamwaist**2
     # scattering rate of Cs from the D2 line:
-    # deltaCsD1 = 2*np.pi*c * (1/wavels - 1/Cs.rwS[0]) # detuning from D1 (rad/s)
-    # deltaCsD2 = 2*np.pi*c * (1/wavels - 1/Cs.rwS[35]) # detuning from D2 (rad/s)
-    # IsatCsD1 = 2.4981 *1e-3 *1e4 # saturation intensity for D1 transition, sigma polarised
-    # IsatCsD2 = 1.1023 *1e-3 *1e4 # saturation intensity for D2 transition, pi polarised
-    # Rsc = 0
-    # for vals in [[Cs.lwS[0], deltaCsD1, IsatCsD1], [Cs.lwS[35], deltaCsD2, IsatCsD2]]:
-    #     Rsc += vals[0]/2. * I/vals[2] / (1 + 4*(vals[1]/vals[0])**2 + I/vals[2])
+    deltaCsD1 = 2*np.pi*c * (1/wavels - 1/Cs.rwS[0]) # detuning from D1 (rad/s)
+    deltaCsD2 = 2*np.pi*c * (1/wavels - 1/Cs.rwS[35]) # detuning from D2 (rad/s)
+    IsatCsD1 = 2.4981 *1e-3 *1e4 # saturation intensity for D1 transition, sigma polarised
+    IsatCsD2 = 1.1023 *1e-3 *1e4 # saturation intensity for D2 transition, pi polarised
+    CsRsc = 0
+    for vals in [[Cs.lwS[0], deltaCsD1, IsatCsD1], [Cs.lwS[35], deltaCsD2, IsatCsD2]]:
+        CsRsc += vals[0]/2. * I/vals[2] / (1 + 4*(vals[1]/vals[0])**2 + I/vals[2])
+    Cstau = 1e-3*kB / (hbar*(2*np.pi/wavels))**2 * 2.*Cs.m / CsRsc # the lifetime is the trap depth / recoil energy / scattering rate
 
     # scattering rate of Rb from the D1 line:
     deltaRbD1 = 2*np.pi*c * (1/wavels - 1/Rb.rwS[0]) # detuning from D1 (rad/s)
     IsatRbD1 = 4.484 *1e-3 *1e4 # saturation intensity for D1 transition, pi polarised
-    Rsc = Rb.lwS[0]/2. * I/IsatRbD1 / (1 + 4*(deltaRbD1/Rb.lwS[0])**2 + I/IsatRbD1)
-    plt.figure()
-    plt.semilogy(wavels*1e9, Rsc/1e3)
-    plt.ylabel('Scattering rate (kHz)')
-    plt.xlabel('Wavelength (nm)')
-    plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
+    RbRsc = Rb.lwS[0]/2. * I/IsatRbD1 / (1 + 4*(deltaRbD1/Rb.lwS[0])**2 + I/IsatRbD1) # per second
+    Rbtau = 1e-3*kB / (hbar*(2*np.pi/wavels))**2 * 2.*Rb.m / RbRsc # the lifetime is the trap depth / recoil energy / scattering rate
+
+    # plot lifetime and scattering rate on the same axis:
+    for Rsc, tau, X in [[RbRsc, Rbtau, Rb.X], [CsRsc, Cstau, Cs.X]]:
+        fig, ax3 = plt.subplots()
+        ax3.set_title('Scattering rate and lifetime of ground state '+X+' in a 1 mK trap')
+        ax3.set_xlabel('Wavelength (nm)')
+        ax3.semilogy(wavels*1e9, Rsc, color='tab:blue')
+        ax3.set_ylabel('Scattering rate ($s^{-1}$)', color='tab:blue')
+        ax3.tick_params(axis='y', labelcolor='tab:blue')
+        ax3.set_xlim(wavels[0]*1e9, wavels[-1]*1e9)
+        ax3.set_ylim(1, 1e5)
+
+        ax4 = ax3.twinx()
+        ax4.semilogy(wavels*1e9, tau, color='tab:orange')
+        ax4.plot(wavels*1e9, np.zeros(len(wavels))+10, '--', color='tab:orange', alpha=0.25) # show acceptable region
+        ax4.set_ylabel('Lifetime (s)', color='tab:orange')
+        ax4.tick_params(axis='y', labelcolor='tab:orange')
+        ax4.set_ylim(0.1,100)
+        plt.tight_layout()
+    
     plt.show()
+    
+        
+if __name__ == "__main__":
+    # run GUI by passing an arg:
+    if np.size(sys.argv) > 1 and sys.argv[1] == 'rungui':
+        runGUI()
+        sys.exit() # don't run any of the other code below
+
+    combinedTrap(Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
+                Rbwl = 810e-9, # wavelength of the Rb tweezer trap in m
+                power = 5e-3, # power of Cs tweezer beam in W
+                Rbpower = 1e-3, # power of Rb tweezer beam in W 
+                beamwaist = 1e-6)
+
+    # getMFStarkShifts()
+    # plotStarkShifts(wlrange=[800,1100])
 
     # for STATES in [[Rb5S, Rb5P],[Cs6S, Cs6P]]:
     #     plt.figure()
@@ -939,9 +993,3 @@ if __name__ == "__main__":
     #     plt.ylim(-5,5)
     #     plt.plot(wavels*1e9, np.zeros(len(wavels)), 'k', alpha=0.25) # show zero crossing
     # plt.show()
-
-    # runGUI()
-    # combinedTrap(Rbwl=820e-9)
-    # getMFStarkShifts()
-    # plotStarkShifts(wlrange=[800,1100])
-    
