@@ -452,7 +452,7 @@ def plotStarkShifts(wavelength = 880e-9,             # laser wavelength in nm
     
     # need a small spacing to resolve the magic wavelengths - so it will run slow
     # to resolve magic wavelengths, take about 10,000 points.
-    wavels = np.linspace(800e-9, 950e-9, 500) 
+    wavels = np.linspace(700e-9, 1100e-9, 500) 
     
     # ac Stark Shift in Joules:
     dE6S = Cs6S.acStarkShift(0,0,0,wavels, mj=0.5, HF=False)
@@ -681,7 +681,7 @@ def combinedTrap(Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
                 power = 6e-3, # power in W
                 beamwaist = 1e-6): # beam waist in m
     """Model tweezer traps for Rb and Cs and find the potential each experiences
-    when they're overlapping"""
+    when they're overlapping. Should fix the separate tweezer trap depths to >1mK"""
     bprop = [Cswl, power, beamwaist] # collect beam properties
     
     # For the 1064nm trap:
@@ -844,6 +844,7 @@ def compareKien():
     
         
 if __name__ == "__main__":
+    #plot the st
     wavelength = 880e-9 # wavelength in m
     power = 5e-3 # beam power in W
     beamwaist = 1e-6 # beam waist in m
@@ -869,24 +870,75 @@ if __name__ == "__main__":
                     nuclear_spin = Cs.I,
                     symbol=Cs.X)               
     
-    trap_depth = Rb5S.acStarkShift(0,0,0,wavelength)/kB * 1e3 # in mK at 880nm
-    print("Rb 5S at %.3g nm: \t %.3g mK"%(wavelength*1e9, trap_depth))
-    print("Cs 6S at 1064 nm: \t %.3g mK"%(Cs6S.acStarkShift(0,0,0,1064e-9)/kB*1e3))
-    wavels = np.linspace(750,950,500)*1e-9 # wavelengths in m
-    
-    for STATES in [[Rb5S, Rb5P],[Cs6S, Cs6P]]:
-        plt.figure()
-        plt.title("AC Stark Shift in "+STATES[0].X+"\nbeam power %.3g mW, beam waist %.3g $\mu$m"%(power*1e3,beamwaist*1e6))
-        plt.plot(wavels*1e9, STATES[0].acStarkShift(0,0,0,wavels)/kB*1e3, 'tab:blue', label='Ground S$_{1/2}$')
-        excited_shift = 0.5*(STATES[1].acStarkShift(0,0,0,wavels,mj=0.5) + STATES[1].acStarkShift(0,0,0,wavels,mj=1.5))
-        plt.plot(wavels*1e9, excited_shift/kB*1e3, 'r-.', label='Excited P$_{3/2}$')
-        plt.legend()
-        plt.ylabel("Trap Depth (mK)")
-        plt.xlabel("Wavelength (nm)")
-        plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
-        plt.ylim(-5,5)
-        plt.plot(wavels*1e9, np.zeros(len(wavels)), 'k', alpha=0.25) # show zero crossing
+    wavels = np.linspace(795,950,500)*1e-9 # wavelengths in m
+
+    # choose power so that Rb trap depth is fixed at 1 mK:
+    Powers = 1e-3*kB * np.pi * eps0 * c * beamwaist**2 / Rb5S.polarisability(wavels) # in Watts
+    fig, ax1 = plt.subplots()
+    ax1.set_title('Fixing the trap depth of ground state Rb at 1 mK')
+    ax1.set_xlabel('Wavelength (nm)')
+    ax1.plot(wavels*1e9, Powers*1e3, color='tab:blue')
+    ax1.set_ylabel('Power (mW)', color='tab:blue')
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+    ax1.set_xlim(wavels[0]*1e9, wavels[-1]*1e9)
+
+    ax2 = ax1.twinx()
+    # now the power and the wavelength are varied:
+    Ls = ['$S_{1/2}$', '$P_{3/2}$']
+    colors = ['tab:orange', 'tab:green', 'tab:red']
+    Cs6SDepth = np.zeros(len(Powers))
+    Cs6PDepth = np.zeros(len(Powers))
+    Rb5PDepth = np.zeros(len(Powers))
+    for obj, res in [[Cs6S, Cs6SDepth], [Cs6P, Cs6PDepth], [Rb5P, Rb5PDepth]]:
+        for i in range(len(Powers)):
+            obj.field.E0 = 2 * np.sqrt(Powers[i] / eps0 / c / np.pi)/beamwaist
+            # average mj states (doesn't have any effect on j=1/2 states)
+            res[i] = 0.5*(obj.acStarkShift(0,0,0, wavels[i], mj=1.5) + 
+                    obj.acStarkShift(0,0,0, wavels[i], mj=0.5))
+        color = colors.pop(0)
+        ax2.plot(wavels*1e9, res*1e3/kB, color=color, label=obj.X+" "+Ls[obj.L])
+    ax2.plot(wavels*1e9, np.ones(len(wavels)), 'k--', alpha=0.75, label='Rb $5S_{1/2}$') # show 1 mK limit
+    ax2.plot(wavels*1e9, np.zeros(len(wavels)), 'k', alpha=0.1) # show zero crossing    
+    ax2.set_ylabel('Trap Depth (mK)', color='tab:orange')
+    ax2.legend()
+    ax2.set_ylim(-3, 3)
+    ax2.tick_params(axis='y', labelcolor='tab:orange')
+    plt.tight_layout()
+
+    I = 2*power / np.pi / beamwaist**2
+    # scattering rate of Cs from the D2 line:
+    # deltaCsD1 = 2*np.pi*c * (1/wavels - 1/Cs.rwS[0]) # detuning from D1 (rad/s)
+    # deltaCsD2 = 2*np.pi*c * (1/wavels - 1/Cs.rwS[35]) # detuning from D2 (rad/s)
+    # IsatCsD1 = 2.4981 *1e-3 *1e4 # saturation intensity for D1 transition, sigma polarised
+    # IsatCsD2 = 1.1023 *1e-3 *1e4 # saturation intensity for D2 transition, pi polarised
+    # Rsc = 0
+    # for vals in [[Cs.lwS[0], deltaCsD1, IsatCsD1], [Cs.lwS[35], deltaCsD2, IsatCsD2]]:
+    #     Rsc += vals[0]/2. * I/vals[2] / (1 + 4*(vals[1]/vals[0])**2 + I/vals[2])
+
+    # scattering rate of Rb from the D1 line:
+    deltaRbD1 = 2*np.pi*c * (1/wavels - 1/Rb.rwS[0]) # detuning from D1 (rad/s)
+    IsatRbD1 = 4.484 *1e-3 *1e4 # saturation intensity for D1 transition, pi polarised
+    Rsc = Rb.lwS[0]/2. * I/IsatRbD1 / (1 + 4*(deltaRbD1/Rb.lwS[0])**2 + I/IsatRbD1)
+    plt.figure()
+    plt.semilogy(wavels*1e9, Rsc/1e3)
+    plt.ylabel('Scattering rate (kHz)')
+    plt.xlabel('Wavelength (nm)')
+    plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
     plt.show()
+
+    # for STATES in [[Rb5S, Rb5P],[Cs6S, Cs6P]]:
+    #     plt.figure()
+    #     plt.title("AC Stark Shift in "+STATES[0].X+"\nbeam power %.3g mW, beam waist %.3g $\mu$m"%(power*1e3,beamwaist*1e6))
+    #     plt.plot(wavels*1e9, STATES[0].acStarkShift(0,0,0,wavels)/kB*1e3, 'tab:blue', label='Ground S$_{1/2}$')
+    #     excited_shift = 0.5*(STATES[1].acStarkShift(0,0,0,wavels,mj=0.5) + STATES[1].acStarkShift(0,0,0,wavels,mj=1.5))
+    #     plt.plot(wavels*1e9, excited_shift/kB*1e3, 'r-.', label='Excited P$_{3/2}$')
+    #     plt.legend()
+    #     plt.ylabel("Trap Depth (mK)")
+    #     plt.xlabel("Wavelength (nm)")
+    #     plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
+    #     plt.ylim(-5,5)
+    #     plt.plot(wavels*1e9, np.zeros(len(wavels)), 'k', alpha=0.25) # show zero crossing
+    # plt.show()
 
     # runGUI()
     # combinedTrap(Rbwl=820e-9)
