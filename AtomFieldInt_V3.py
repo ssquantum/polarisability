@@ -184,10 +184,11 @@ class atom:
     P1/2 -> nS1/2. nD3/2
     P3/2 -> nS1/2, nD3/2, nD5/2
     
-    D0: Dipole matrix elements (C m)
-    rw: resonant wavelength (m) of transitions 
-    w0: resonant frequency (rad/s) of transitions 
-    lw: natural linewidth (rad/s) of transitions 
+    D0:  Dipole matrix elements (C m)
+    nlj: quantum numbers of the states (n, l, j)
+    rw:  resonant wavelength (m) of transitions 
+    w0:  resonant frequency (rad/s) of transitions 
+    lw:  natural linewidth (rad/s) of transitions 
     """
     def __init__(self, mass, nuclear_spin, symbol, S1_2DME, P1_2DME, P3_2DME,
                 S1_2RW, P1_2RW, P3_2RW, S1_2LW, P1_2LW, P3_2LW,
@@ -330,7 +331,7 @@ class dipole:
         good quantum numbers. Assumes linear polarisation so that the vector
         polarisability is zero."""
         if np.size(wavel) != 0:            
-            omegas = np.array(2*np.pi*c/wavel)# laser frequencies (rad/s)
+            omegas = np.array(2*np.pi*c/wavel) # laser frequencies (rad/s)
         else:
             omegas = self.omegas
          
@@ -397,6 +398,11 @@ class dipole:
                 else:
                     return aSvals + aTvals * (3*mj**2 - self.J*(self.J + 1)
                         ) / self.J / (2*self.J - 1)
+                    # include a general polarisation of light:
+                    # u = self.field.ehat
+                    # return aSvals + mj/self.J * (np.conj(u[0])*u[1]).imag * aVvals + (
+                    # 3*abs(u[2])**2 - 1)/2. * (3*mj**2 - self.J*(self.J + 1)
+                    # ) / self.J / (2*self.J - 1)) * aTvals
         else:
             # there is no tensor polarisability for the J=1/2 state
             return aSvals
