@@ -867,7 +867,7 @@ def compareKien():
         plt.show()
     
 
-def check880trap(wavelength = 880e-9,     # wavelength in m
+def check880Trap(wavelength = 880e-9,     # wavelength in m
                  power = 5e-3,            # beam power in W
                  beamwaist = 1e-6):       # beam waist in m
     """Plot graphs of the trap depth experienced by Cs around 880nm when 
@@ -932,7 +932,7 @@ def check880trap(wavelength = 880e-9,     # wavelength in m
     ax2.tick_params(axis='y', labelcolor='tab:orange')
     plt.tight_layout()
 
-    I = 2*power / np.pi / beamwaist**2
+    I = 2*Powers / np.pi / beamwaist**2
     # scattering rate of Cs from the D2 line:
     deltaCsD1 = 2*np.pi*c * (1/wavels - 1/Cs.rwS[0]) # detuning from D1 (rad/s)
     deltaCsD2 = 2*np.pi*c * (1/wavels - 1/Cs.rwS[35]) # detuning from D2 (rad/s)
@@ -977,11 +977,12 @@ if __name__ == "__main__":
         runGUI()
         sys.exit() # don't run any of the other code below
 
-    combinedTrap(Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
-                Rbwl = 810e-9, # wavelength of the Rb tweezer trap in m
-                power = 5e-3, # power of Cs tweezer beam in W
-                Rbpower = 1e-3, # power of Rb tweezer beam in W 
-                beamwaist = 1e-6)
+    # combinedTrap(Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
+    #             Rbwl = 810e-9, # wavelength of the Rb tweezer trap in m
+    #             power = 5e-3, # power of Cs tweezer beam in W
+    #             Rbpower = 1e-3, # power of Rb tweezer beam in W 
+    #             beamwaist = 1e-6)
+    check880Trap()
 
     # getMFStarkShifts()
     # plotStarkShifts(wlrange=[800,1100])
