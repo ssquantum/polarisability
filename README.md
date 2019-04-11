@@ -1,12 +1,14 @@
 # polarisability
 Calculations of the polarisability and hence stark shift of Rb and Cs atoms (fully generalisable to other atoms)
 
-Calculates the polarisabilities in two regimes:
+AtomFieldInt_V3.py calculates the polarisabilities in two regimes:
  - hyperfine splitting can be ignored (J is a good quantum number, sum over <J|d|J'> matrix elements)
  - the stark shift is small compared to hyperfine splitting (so the combined Hamiltonian is diagonal in the hyperfine basis,
    F is a good quantum number, and the Wigner-Eckart theorem can be used to write <F|d|F'> in terms of <J|d|J'>)
    
 Note then that the results may be inaccurate when the ac Stark shift is on the order of the hyperfine splitting.
+
+AtomFieldInt.py attempts to use a numerical matrix diagonalisation for when there is mixing of states, however it is currently not working.
    
 Several classes are implemented so that functions using the polarisability can be flexibly created:
  - atom - contains the properties of atoms used to calculate the polarisability (all in SI units):

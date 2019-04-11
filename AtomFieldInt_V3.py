@@ -868,8 +868,10 @@ def compareKien():
     
 
 def check880Trap(wavelength = 880e-9,     # wavelength in m
+                 wavels = np.linspace(795,950,500)*1e-9, # wavelengths in m to plot
                  power = 5e-3,            # beam power in W
-                 beamwaist = 1e-6):       # beam waist in m
+                 beamwaist = 1e-6,        # beam waist in m
+                 species = 'Rb'):         # which species to set a 1mK trap for
     """Plot graphs of the trap depth experienced by Cs around 880nm when 
     the ground state Rb trap depth is fixed at 1mK. Look at the scattering
     rates and hence trap lifetimes that are possible."""
@@ -895,27 +897,32 @@ def check880Trap(wavelength = 880e-9,     # wavelength in m
                     nuclear_spin = Cs.I,
                     symbol=Cs.X)               
     
-    wavels = np.linspace(795,950,500)*1e-9 # wavelengths in m
-
     # choose power so that Rb trap depth is fixed at 1 mK:
-    Powers = 1e-3*kB * np.pi * eps0 * c * beamwaist**2 / Rb5S.polarisability(wavels) # in Watts
-    fig, ax1 = plt.subplots()
-    ax1.set_title('Fixing the trap depth of ground state Rb at 1 mK')
+    if species == Cs.X:
+        Powers = abs(1e-3*kB * np.pi * eps0 * c * beamwaist**2 / Cs6S.polarisability(wavels)) # in Watts
+    else:
+        Powers = abs(1e-3*kB * np.pi * eps0 * c * beamwaist**2 / Rb5S.polarisability(wavels)) # in Watts
+    _, ax1 = plt.subplots()
+    ax1.set_title('Fixing the trap depth of ground state '+species+' at 1 mK')
     ax1.set_xlabel('Wavelength (nm)')
     ax1.plot(wavels*1e9, Powers*1e3, color='tab:blue')
     ax1.set_ylabel('Power (mW)', color='tab:blue')
     ax1.tick_params(axis='y', labelcolor='tab:blue')
     ax1.set_xlim(wavels[0]*1e9, wavels[-1]*1e9)
+    # ax1.set_ylim(min(Powers)*1e3-0.5, 15)
 
     ax2 = ax1.twinx()
     # now the power and the wavelength are varied:
     Llabels = ['$S_{1/2}$', '$P_{3/2}$']
-    colors = ['tab:orange', 'tab:red', 'tab:green']
-    linestyles = ['-', '-.', ':']
-    Cs6SDepth = np.zeros(len(Powers))
-    Cs6PDepth = np.zeros(len(Powers))
-    Rb5PDepth = np.zeros(len(Powers))
-    for obj, res in [[Cs6S, Cs6SDepth], [Cs6P, Cs6PDepth], [Rb5P, Rb5PDepth]]:
+    if species == Cs.X:
+        colors = ['k', 'tab:orange', 'tab:orange', 'tab:orange']
+        linestyles = ['--', '-.', '-', ':']
+    else:
+        colors = ['tab:orange', 'tab:orange', 'k', 'tab:orange']
+        linestyles = ['-', '-.', '--', ':']
+    res = np.zeros(len(Powers))
+    trapdepths = []
+    for obj in [Cs6S, Cs6P, Rb5S, Rb5P]:
         for i in range(len(Powers)):
             obj.field.E0 = 2 * np.sqrt(Powers[i] / eps0 / c / np.pi)/beamwaist
             # average mj states (doesn't have any effect on j=1/2 states)
@@ -924,7 +931,8 @@ def check880Trap(wavelength = 880e-9,     # wavelength in m
         color = colors.pop(0)
         ls = linestyles.pop(0)
         ax2.plot(wavels*1e9, res*1e3/kB, color=color, label=obj.X+" "+Llabels[obj.L], linestyle=ls)
-    ax2.plot(wavels*1e9, np.ones(len(wavels)), 'k--', alpha=0.75, label='Rb $5S_{1/2}$') # show 1 mK limit
+        trapdepths.append(res)
+
     ax2.plot(wavels*1e9, np.zeros(len(wavels)), 'k', alpha=0.1) # show zero crossing    
     ax2.set_ylabel('Trap Depth (mK)', color='tab:orange')
     ax2.legend()
@@ -941,31 +949,34 @@ def check880Trap(wavelength = 880e-9,     # wavelength in m
     CsRsc = 0
     for vals in [[Cs.lwS[0], deltaCsD1, IsatCsD1], [Cs.lwS[35], deltaCsD2, IsatCsD2]]:
         CsRsc += vals[0]/2. * I/vals[2] / (1 + 4*(vals[1]/vals[0])**2 + I/vals[2])
-    Cstau = 1e-3*kB / (hbar*(2*np.pi/wavels))**2 * 2.*Cs.m / CsRsc # the lifetime is the trap depth / recoil energy / scattering rate
+    # Cstau = 1e-3*kB / (hbar*(2*np.pi/wavels))**2 * 2.*Cs.m / CsRsc # the lifetime is the trap depth / recoil energy / scattering rate
+    Cst = 4*np.sqrt(Cs.m*abs(trapdepths[0])) / (2*np.pi/wavels)**2 /hbar /beamwaist /CsRsc # duration in vibrational ground state (s) = 1/Lamb-Dicke^2 /Rsc
 
     # scattering rate of Rb from the D1 line:
     deltaRbD1 = 2*np.pi*c * (1/wavels - 1/Rb.rwS[0]) # detuning from D1 (rad/s)
     IsatRbD1 = 4.484 *1e-3 *1e4 # saturation intensity for D1 transition, pi polarised
     RbRsc = Rb.lwS[0]/2. * I/IsatRbD1 / (1 + 4*(deltaRbD1/Rb.lwS[0])**2 + I/IsatRbD1) # per second
-    Rbtau = 1e-3*kB / (hbar*(2*np.pi/wavels))**2 * 2.*Rb.m / RbRsc # the lifetime is the trap depth / recoil energy / scattering rate
+    # Rbtau = 1e-3*kB / (hbar*(2*np.pi/wavels))**2 * 2.*Rb.m / RbRsc # the lifetime is the trap depth / recoil energy / scattering rate
+    Rbt = 4*np.sqrt(Cs.m*abs(trapdepths[2])) / (2*np.pi/wavels)**2 /hbar /beamwaist /RbRsc # duration in vibrational ground state (s) = 1/Lamb-Dicke^2 /Rsc
 
     # plot lifetime and scattering rate on the same axis:
-    for Rsc, tau, X in [[RbRsc, Rbtau, Rb.X], [CsRsc, Cstau, Cs.X]]:
+    for Rsc, ts, X in [[RbRsc, Rbt, Rb.X], [CsRsc, Cst, Cs.X]]:
         fig, ax3 = plt.subplots()
-        ax3.set_title('Scattering rate and lifetime of ground state '+X+' in a 1 mK trap')
+        ax3.set_title('Scattering rate and lifetime of ground state '+X+' in a 1 mK trap (for '+species+')')
         ax3.set_xlabel('Wavelength (nm)')
         ax3.semilogy(wavels*1e9, Rsc, color='tab:blue')
+        ax3.plot(wavels*1e9, np.zeros(len(wavels))+100, '--', color='tab:blue', alpha=0.25) # show acceptable region
         ax3.set_ylabel('Scattering rate ($s^{-1}$)', color='tab:blue')
         ax3.tick_params(axis='y', labelcolor='tab:blue')
         ax3.set_xlim(wavels[0]*1e9, wavels[-1]*1e9)
         ax3.set_ylim(1, 1e5)
 
         ax4 = ax3.twinx()
-        ax4.semilogy(wavels*1e9, tau, color='tab:orange')
-        ax4.plot(wavels*1e9, np.zeros(len(wavels))+10, '--', color='tab:orange', alpha=0.25) # show acceptable region
-        ax4.set_ylabel('Lifetime (s)', color='tab:orange')
+        ax4.semilogy(wavels*1e9, ts, color='tab:orange')
+        # ax4.plot(wavels*1e9, np.ones(len(wavels)), '--', color='tab:orange', alpha=0.25) # show acceptable region
+        ax4.set_ylabel('Time in the vibrational ground state (s)', color='tab:orange')
         ax4.tick_params(axis='y', labelcolor='tab:orange')
-        ax4.set_ylim(0.1,100)
+        ax4.set_ylim(0.001,10)
         plt.tight_layout()
     
     plt.show()
@@ -982,7 +993,7 @@ if __name__ == "__main__":
     #             power = 5e-3, # power of Cs tweezer beam in W
     #             Rbpower = 1e-3, # power of Rb tweezer beam in W 
     #             beamwaist = 1e-6)
-    check880Trap()
+    check880Trap(wavels=np.linspace(795, 930, 400)*1e-9)
 
     # getMFStarkShifts()
     # plotStarkShifts(wlrange=[800,1100])
