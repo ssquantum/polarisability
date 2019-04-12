@@ -868,7 +868,7 @@ def compareKien():
     
 
 def check880Trap(wavelength = 880e-9,     # wavelength in m
-                 wavels = np.linspace(795,950,500)*1e-9, # wavelengths in m to plot
+                 wavels = np.linspace(795,930,500)*1e-9, # wavelengths in m to plot
                  power = 5e-3,            # beam power in W
                  beamwaist = 1e-6,        # beam waist in m
                  species = 'Rb'):         # which species to set a 1mK trap for
@@ -920,9 +920,10 @@ def check880Trap(wavelength = 880e-9,     # wavelength in m
     else:
         colors = ['tab:orange', 'tab:orange', 'k', 'tab:orange']
         linestyles = ['-', '-.', '--', ':']
-    res = np.zeros(len(Powers))
+    
     trapdepths = []
     for obj in [Cs6S, Cs6P, Rb5S, Rb5P]:
+        res = np.zeros(len(Powers))
         for i in range(len(Powers)):
             obj.field.E0 = 2 * np.sqrt(Powers[i] / eps0 / c / np.pi)/beamwaist
             # average mj states (doesn't have any effect on j=1/2 states)
@@ -957,7 +958,7 @@ def check880Trap(wavelength = 880e-9,     # wavelength in m
     IsatRbD1 = 4.484 *1e-3 *1e4 # saturation intensity for D1 transition, pi polarised
     RbRsc = Rb.lwS[0]/2. * I/IsatRbD1 / (1 + 4*(deltaRbD1/Rb.lwS[0])**2 + I/IsatRbD1) # per second
     # Rbtau = 1e-3*kB / (hbar*(2*np.pi/wavels))**2 * 2.*Rb.m / RbRsc # the lifetime is the trap depth / recoil energy / scattering rate
-    Rbt = 4*np.sqrt(Cs.m*abs(trapdepths[2])) / (2*np.pi/wavels)**2 /hbar /beamwaist /RbRsc # duration in vibrational ground state (s) = 1/Lamb-Dicke^2 /Rsc
+    Rbt = 4*np.sqrt(Rb.m*abs(trapdepths[2])) / (2*np.pi/wavels)**2 /hbar /beamwaist /RbRsc # duration in vibrational ground state (s) = 1/Lamb-Dicke^2 /Rsc
 
     # plot lifetime and scattering rate on the same axis:
     for Rsc, ts, X in [[RbRsc, Rbt, Rb.X], [CsRsc, Cst, Cs.X]]:
@@ -973,7 +974,7 @@ def check880Trap(wavelength = 880e-9,     # wavelength in m
 
         ax4 = ax3.twinx()
         ax4.semilogy(wavels*1e9, ts, color='tab:orange')
-        # ax4.plot(wavels*1e9, np.ones(len(wavels)), '--', color='tab:orange', alpha=0.25) # show acceptable region
+        ax4.plot(wavels*1e9, np.ones(len(wavels))/2., '--', color='tab:orange', alpha=0.25) # show acceptable region
         ax4.set_ylabel('Time in the vibrational ground state (s)', color='tab:orange')
         ax4.tick_params(axis='y', labelcolor='tab:orange')
         ax4.set_ylim(0.001,10)
@@ -993,7 +994,7 @@ if __name__ == "__main__":
     #             power = 5e-3, # power of Cs tweezer beam in W
     #             Rbpower = 1e-3, # power of Rb tweezer beam in W 
     #             beamwaist = 1e-6)
-    check880Trap(wavels=np.linspace(795, 930, 400)*1e-9)
+    check880Trap(wavels=np.linspace(795, 930, 400)*1e-9, species='Rb')
 
     # getMFStarkShifts()
     # plotStarkShifts(wlrange=[800,1100])
