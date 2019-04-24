@@ -22,9 +22,9 @@ from AtomFieldInt_V3 import (dipole, Rb, Cs, c, eps0, h, hbar, a0, e, me,
     kB, amu, Eh, au)
 
 Cswl = 1064e-9   # wavelength of the Cs tweezer trap in m
-Rbwl = 880.2e-9  # wavelength of the Rb tweezer trap in m
+Rbwl = 815e-9  # wavelength of the Rb tweezer trap in m
 power = 6e-3     # power of Cs tweezer beam in W
-Rbpower = 6e-3   # power of Rb tweezer beam in W 
+Rbpower = 0.5e-3   # power of Rb tweezer beam in W 
 beamwaist = 1e-6 # beam waist in m
 bprop = [Cswl, power, beamwaist] # collect beam properties
     
@@ -49,21 +49,46 @@ CsP = dipole(Cs.m, (1,3/2.,5,5), bprop,
                 nuclear_spin = Cs.I,
                 symbol=Cs.X)
                 
+print("Rb tweezer wavelength: %.0f nm\t\tCs tweezer wavelength: %.0f nm\n"%(Cswl*1e9, Rbwl*1e9))
+
 # set the power of the traps so that the trap depth experienced by each 
 # species in the overlapping trap is the same:
 # Rbpower = (Cs1064.polarisability(Cswl,mj=0.5) - Rb1064.polarisability(Cswl, mj=0.5) 
 #     )/ (Rb1064.polarisability(Rbwl, mj=0.5) - Cs1064.polarisability(Rbwl, mj=0.5)) * power
 
 # Stability condition 1: 
-P1Rb =  abs((-0.6e-3*kB*np.pi*eps0*c*beamwaist**2 + Cs1064.polarisability(Cswl)*power) 
-                    / Cs1064.polarisability(Rbwl))
-print("""Condition 1: The combined trap depth must be > 0.6mK for Cs.
-Rb tweezer power < %.3g mW"""%(P1Rb*1e3))
+def P1Rb(wlCs, wlRb, U0min=-0.6e-3*kB, Cspower=power):
+    """Condition 1: The combined trap depth must be > 0.6mK for Cs."""
+    return abs((U0min*np.pi*eps0*c*beamwaist**2 + Cs1064.polarisability(wlCs)*Cspower) 
+                    / Cs1064.polarisability(wlRb))
 
-# Stability condition 2: Rb is 1.5x more strongly attracted to its own tweezer
-P2Rb = 1.5 * Rb1064.polarisability(Cswl) * power / Rb1064.polarisability(Rbwl)
+print("""Condition 1: The combined trap depth must be > 0.6mK for Cs.
+Power ratio Rb / Cs < %.3g """%(P1Rb(Cswl, Rbwl) / power))
+
+# Stability condition 2: 
+def P2Rb(wlCs, wlRb, Cspower=power):
+    """Condition 2: Rb is 1.5x more strongly attracted to its own tweezer"""
+    return 1.5 * Rb1064.polarisability(wlCs) * Cspower / Rb1064.polarisability(wlRb)
+
 print("""Condition 2: Rb is 1.5x more strongly attracted to its own tweezer.
-Rb tweezer power > %.3g mW\n"""%(P2Rb*1e3))
+Power ratio Rb / Cs > %.3g \n"""%(P2Rb(Cswl, Rbwl) / power))
+
+# plot the stability conditions as a function of wavelength
+wavels = np.linspace(795, 845, 200) * 1e-9 # wavelengths to consider in m
+plt.figure()
+plt.title('Threshold Conditions on Power Ratio $P_{Rb}/P_{Cs}$')
+plt.plot(wavels*1e9, P1Rb(Cswl, wavels)/power, color='tab:blue', 
+    label='Upper Limit from $U_{Cs}$ < -0.6 mK')
+plt.plot(wavels*1e9, P2Rb(Cswl, wavels)/power, color='tab:orange',
+    label='Lower Limit from $U_{Rb}(\lambda) > 1.5 U_{Rb}$(%.0f nm)'%(Cswl*1e9)) 
+plt.xlabel('Wavelength (nm)')
+plt.ylabel('Power Ratio $P_{Rb}/P_{Cs}$')
+plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
+plt.text(800, 0.36, 'Upper limit at %.0f nm: %.3g'%(Rbwl*1e9, P1Rb(Cswl,Rbwl)/power),
+    color='tab:blue')
+plt.text(800, 0.33, 'Lower limit at %.0f nm: %.3g'%(Rbwl*1e9, P2Rb(Cswl,Rbwl)/power),
+    color='tab:orange')
+plt.legend()
 
 # for the 880nm trap:
 bprop = [Rbwl, abs(Rbpower), beamwaist]
@@ -79,16 +104,16 @@ Cs880 = dipole(Cs.m, (0,1/2.,3,3), bprop, # ground state Cs 6 S 1/2
                 
 
 # in the trap with both tweezers overlapping: 
-U0Rb = abs(Rb1064.acStarkShift(0,0,0) + Rb880.acStarkShift(0,0,0))
-U0Cs = abs(Cs1064.acStarkShift(0,0,0) + Cs880.acStarkShift(0,0,0))
-wrRb = np.sqrt(4*U0Rb / Rb.m / beamwaist**2) /2. /np.pi /1e3  # radial trapping frequency for Rb in kHz
-wrCs = np.sqrt(4*U0Cs / Cs.m / beamwaist**2) /2. /np.pi /1e3  # radial trapping frequency for Cs in KHz
+U0Rb = Rb1064.acStarkShift(0,0,0) + Rb880.acStarkShift(0,0,0)
+U0Cs = Cs1064.acStarkShift(0,0,0) + Cs880.acStarkShift(0,0,0)
+wrRb = np.sqrt(4*abs(U0Rb) / Rb.m / beamwaist**2) /2. /np.pi /1e3  # radial trapping frequency for Rb in kHz
+wrCs = np.sqrt(4*abs(U0Cs) / Cs.m / beamwaist**2) /2. /np.pi /1e3  # radial trapping frequency for Cs in KHz
 print("%.0f beam power: %.3g mW\t\t%.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, Rbpower*1e3))
 print("""In the combined %.0fnm and %.0fnm trap:
-Rubidium:   trap depth %.3g mK
-            radial trapping frequency %.0f kHz 
-Caesium:    trap depth %.3g mK
-            radial trapping frequency %.0f kHz"""%(Rbwl*1e9, Cswl*1e9, U0Rb/kB*1e3, wrRb, U0Cs/kB*1e3, wrCs))
+Rubidium:       trap depth %.3g mK
+                radial trapping frequency %.0f kHz 
+Caesium:        trap depth %.3g mK
+                radial trapping frequency %.0f kHz"""%(Rbwl*1e9, Cswl*1e9, U0Rb/kB*1e3, wrRb, U0Cs/kB*1e3, wrCs))
 
 # with just the Cs tweezer trap:
 URb = abs(Rb1064.acStarkShift(0,0,0))
@@ -96,10 +121,10 @@ wrRb1064 = np.sqrt(4*URb / Rb.m / beamwaist**2) /2. /np.pi /1e3
 UCs = abs(Cs1064.acStarkShift(0,0,0))
 wrCs1064 = np.sqrt(4*UCs / Cs.m / beamwaist**2) /2. /np.pi /1e3
 print("""\nIn just the %.0fnm trap:
-Rubidium:   trap depth %.3g mK
-            radial trapping frequency %.0f kHz
-Caesium:    trap depth %.3g mK
-            radial trapping frequency %.0f kHz"""%(Cswl*1e9, URb/kB*1e3, wrRb1064, UCs/kB*1e3, wrCs1064))
+Rubidium:       trap depth %.3g mK
+                radial trapping frequency %.0f kHz
+Caesium:        trap depth %.3g mK
+                radial trapping frequency %.0f kHz"""%(Cswl*1e9, URb/kB*1e3, wrRb1064, UCs/kB*1e3, wrCs1064))
 
 
 # plot merging traps:
