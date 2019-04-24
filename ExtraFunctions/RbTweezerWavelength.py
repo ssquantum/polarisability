@@ -41,16 +41,15 @@ Cs6P = dipole(Cs.m, (1,3/2.,3,3), bprop, # Cs excited 6 P 3/2 state
 
 # plot the absolute polarisabilities of Rb and Cs
 fig, (ax1, ax2) = plt.subplots(2, 1, gridspec_kw = {'height_ratios':[3, 2],'hspace':0}, sharex='all')
-ax1.set_title('Polarisability of ground state Rb and Cs')
-ax1.plot(wavels*1e9, Rb5S.polarisability(wavels)/au, color='tab:blue', label = 'Rb') # Rb
-ax1.plot(wavels*1e9, np.zeros(len(wavels)) + Rb5S.polarisability(1064e-9)/au, 
+ax1.set_title('Absolute polarisability of ground state Rb and Cs')
+ax1.plot(wavels*1e9, abs(Rb5S.polarisability(wavels))/au, color='tab:blue', label = 'Rb') # Rb
+ax1.plot(wavels*1e9, np.zeros(len(wavels)) + abs(Rb5S.polarisability(1064e-9))/au, 
         '--', color='tab:blue', label = 'Rb at 1064 nm') # compare value at 1064nm
-ax1.plot(wavels*1e9, Cs6S.polarisability(wavels)/au, color='tab:orange', label = 'Cs') # Cs
-ax1.plot(wavels*1e9, np.zeros(len(wavels)) + Cs6S.polarisability(1064e-9)/au, 
+ax1.plot(wavels*1e9, abs(Cs6S.polarisability(wavels))/au, color='tab:orange', label = 'Cs') # Cs
+ax1.plot(wavels*1e9, np.zeros(len(wavels)) + abs(Cs6S.polarisability(1064e-9))/au, 
         '--', color='tab:orange', label = 'Cs at 1064 nm') # compare value at 1064nm
-ax1.plot(wavels*1e9, np.zeros(len(wavels)), 'k', alpha=0.1) # show zero crossing   
-ax1.set_ylabel('Polarisability ($a_0^3$)')
-ax1.set_ylim(-7500, 8000)
+ax1.set_ylabel('|Polarisability| ($a_0^3$)')
+ax1.set_ylim(0, 8000)
 ax1.legend()
 
 # plot the ratio of groundstate polarisabliities Rb / Cs
@@ -125,9 +124,19 @@ CsRsc, Cst, RbRsc, Rbt = get_scattering_rates(RbPowers, np.array(list(wavels) + 
 CsPower = abs(1e-3*kB * np.pi * eps0 * c * beamwaist**2 / Cs6S.polarisability(1064e-9)) # in Watts
 CsRsc_Cs, Cst_Cs, RbRsc_Cs, Rbt_Cs = get_scattering_rates(CsPower, 1064e-9, beamwaist)
 
+# Define the acceptable region where both scattering rates are < 100 Hz
+# find the wavelength at which CsRsc and RbRsc cross:
+diff = abs(CsRsc - RbRsc)
+cross = wavels[np.argmin(diff)] * 1e9 # in nm
+# find the wavelength where RbRsc < 100Hz
+lolim = wavels[np.where(RbRsc < 100)[0][0]] * 1e9 # in nm
+# find the wavelength where CsRsc < 100Hz
+uplim = wavels[np.where(CsRsc < 100)[0][-1]]* 1e9 # in nm
+
+
 # plot the scattering rate in a Rb 1mK trap for Rb, Cs
 fig, (ax3, ax5) = plt.subplots(2, 1, gridspec_kw = {'height_ratios':[3, 2],'hspace':0.05}, sharex='all')
-ax3.set_title('Scattering rates of ground state Rb and Cs at a fixed trap depth of 1 mK')
+ax3.set_title('Scattering rates of ground state Rb and Cs \nat a fixed trap depth of 1 mK')
 for Rsc, Rsc1064, color, symbol in [[RbRsc, RbRsc_Cs, 'tab:blue', 'Rb'], [CsRsc, CsRsc_Cs, 'tab:orange', 'Cs']]:
     ax3.semilogy(wavels*1e9, Rsc[:-1], color=color, label=symbol) 
     ax3.semilogy(wavels*1e9, np.zeros(len(wavels))+Rsc[-1], 
@@ -150,5 +159,7 @@ ax5.semilogy(wavels*1e9, RbRsc[:-1]/CsRsc[:-1])
 ax5.set_ylabel('Ratio of Rb / Cs\nscattering rates ')
 ax5.set_xlabel('Wavelength (nm)')
 ax5.set_xlim(wavels[0]*1e9, wavels[-2]*1e9)
+ax5.text(800, 1e5, 'Crossover: %.4g nm, Acceptable region: %.4g - %.4g nm'
+        %(cross, lolim, uplim))
 plt.tight_layout()
 plt.show()

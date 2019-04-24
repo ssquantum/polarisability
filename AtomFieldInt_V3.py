@@ -263,6 +263,7 @@ class Gauss:
         self.lam = wavelength    # wavelength of the laser light (in metres)
         self.P   = power         # total power of the beam (in Watts)
         self.w0  = beam_waist    # the beam waist defines the laser mode (in metres)
+        self.I   = 2 * power / np.pi / beam_waist**2 # intensity of beam (in Watts/metre squared)
         self.ehat= polarization  # the direction of polarization (assume linear)
         # note: we will mostly ignore polarization since the induced dipole 
         # moment will be proportional to the direction of the field
