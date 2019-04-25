@@ -14,10 +14,12 @@ from AtomFieldInt_V3 import (dipole, Rb, Cs, c, eps0, h, hbar, a0, e, me,
 wavelength = 880.2e-9     # wavelength in m
 wavels = np.linspace(795,850,500)*1e-9 # wavelengths in m to plot
 power = 5e-3            # beam power in W
-beamwaist = 1e-6        # beam waist in m
+# beam waists are only used to calculate the Lambe-Dicke parameter
+Cswaist = 1.2e-6        # beam waist of Cs tweezer in m
+Rbwaist = 0.9e-6        # beam waist of Rb tweezer in m
 
 # create dipole objects for ground and excited state Rb / Cs
-bprop = [wavelength, power, beamwaist]
+bprop = [wavelength, power, Rbwaist]
 Rb5S = dipole(Rb.m, (0,1/2.,1,1), bprop,  # Rb ground 5 S 1/2 state
                 Rb.D0S, Rb.w0S, Rb.lwS, Rb.nljS,
                 nuclear_spin = Rb.I,
@@ -66,29 +68,26 @@ ax2.set_xlim(wavels[0]*1e9, wavels[-1]*1e9)
 plt.tight_layout()
 
 
-def get_scattering_rates(Powers, wls, w0):
+def get_scattering_rates(I, wls):
     """get the trap depths for ground and excited states of Rb and Cs
     then use them to calculate the scattering rates
-    Powers: beam power in Watts
-    wls: wavelengths in m (same size as Powers)
-    w0: beamwaist in m
+    I:   beam intensity in Watts per metre squared
+    wls: wavelengths in m (same size as I)
     """
     trapdepths = []
     for obj in [Cs6S, Cs6P, Rb5S, Rb5P]:
-        if np.size(Powers) > 1:
-            res = np.zeros(len(Powers))
-            for i in range(len(Powers)):
-                obj.field.E0 = 2 * np.sqrt(Powers[i] / eps0 / c / np.pi)/w0
+        if np.size(I) > 1:
+            res = np.zeros(len(I))
+            for i in range(len(I)):
+                obj.field.E0 = np.sqrt(2 * I[i] / eps0 / c)
                 # average mj states (doesn't have any effect on j=1/2 states)
                 res[i] = 0.5*(obj.acStarkShift(0,0,0, wls[i], mj=1.5) + 
                         obj.acStarkShift(0,0,0, wls[i], mj=0.5))
             trapdepths.append(res)
         else: # for only one power/wavelength
-            obj.field.E0 = 2 * np.sqrt(Powers / eps0 / c / np.pi)/w0
+            obj.field.E0 = np.sqrt(2 * I / eps0 / c)
             trapdepths.append(0.5*(obj.acStarkShift(0,0,0, wls, mj=1.5) + 
                         obj.acStarkShift(0,0,0, wls, mj=0.5)))
-
-    I = 2*Powers / np.pi / w0**2 # intensity in W / m^2
 
     # scattering rate of Cs from the D1 and D2 lines:
     deltaCsD1 = 2*np.pi*c * (1/wls - 1/Cs.rwS[0]) # detuning from D1 (rad/s)
@@ -101,7 +100,7 @@ def get_scattering_rates(Powers, wls, w0):
     # the lifetime is the trap depth / recoil energy / scattering rate
     # Cstau = 1e-3*kB / (hbar*(2*np.pi/wavels))**2 * 2.*Cs.m / CsRsc 
     # duration in vibrational ground state (s) = 1/Lamb-Dicke^2 /Rsc
-    Cst = 4*np.sqrt(Cs.m*abs(trapdepths[0])) / (2*np.pi/wls)**2 /hbar /w0 /CsRsc 
+    Cst = 4*np.sqrt(Cs.m*abs(trapdepths[0])) / (2*np.pi/wls)**2 /hbar /Cswaist /CsRsc 
 
     # scattering rate of Rb from the D1 line:
     deltaRbD1 = 2*np.pi*c * (1/wls - 1/Rb.rwS[0]) # detuning from D1 (rad/s)
@@ -110,19 +109,21 @@ def get_scattering_rates(Powers, wls, w0):
     # Rbtau = 1e-3*kB / (hbar*(2*np.pi/wavels))**2 * 2.*Rb.m / RbRsc 
     # the lifetime is the trap depth / recoil energy / scattering rate
     # duration in vibrational ground state (s) = 1/Lamb-Dicke^2 /Rsc
-    Rbt = 4*np.sqrt(Rb.m*abs(trapdepths[2])) / (2*np.pi/wls)**2 /hbar /w0 /RbRsc 
+    Rbt = 4*np.sqrt(Rb.m*abs(trapdepths[2])) / (2*np.pi/wls)**2 /hbar /Rbwaist /RbRsc 
 
+    # for i in range(len(wls)):
+    #   print('\t'.join(['%.3g']*7)%(wls[i]*1e9, trapdepths[0][i]*1e3/kB, CsRsc[i], 1e3/CsRsc[i], I[i]*Rbwaist**2*np.pi*0.5e3, RbRsc[i], 1e3/RbRsc[i]))
     return CsRsc, Cst, RbRsc, Rbt
 
 # scattering rates in a 1mK trap for Rb, Cs
 # choose powers so that Rb is fixed at 1mK trap depth. Add on wavelengths of 880.2nm and 1064nm
-RbPowers = abs(1e-3*kB * np.pi * eps0 * c * beamwaist**2 / Rb5S.polarisability(
-        np.array(list(wavels) + [880.2e-9]))) # in Watts
-CsRsc, Cst, RbRsc, Rbt = get_scattering_rates(RbPowers, np.array(list(wavels) + [880.2e-9]), beamwaist)
+Rbintsts = abs(1e-3*kB * eps0 * c * 2 / Rb5S.polarisability(
+        np.array(list(wavels) + [880.2e-9]))) # intensity in Watts per metre squared
+CsRsc, Cst, RbRsc, Rbt = get_scattering_rates(Rbintsts, np.array(list(wavels) + [880.2e-9]))
 
 # choose powers so that Cs is fixed at 1mK trap depth to compare at 1064nm
-CsPower = abs(1e-3*kB * np.pi * eps0 * c * beamwaist**2 / Cs6S.polarisability(1064e-9)) # in Watts
-CsRsc_Cs, Cst_Cs, RbRsc_Cs, Rbt_Cs = get_scattering_rates(CsPower, 1064e-9, beamwaist)
+Csintsts = abs(1e-3*kB * eps0 * c * 2 / Cs6S.polarisability(1064e-9)) # intensity in Watts per metre squared
+CsRsc_Cs, Cst_Cs, RbRsc_Cs, Rbt_Cs = get_scattering_rates(Csintsts, 1064e-9)
 
 # Define the acceptable region where both scattering rates are < 100 Hz
 # find the wavelength at which CsRsc and RbRsc cross:
