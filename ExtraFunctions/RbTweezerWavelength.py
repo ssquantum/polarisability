@@ -55,11 +55,21 @@ ax1.set_ylim(0, 8000)
 ax1.legend()
 
 # plot the ratio of groundstate polarisabliities Rb / Cs
-ax2.semilogy(wavels*1e9, abs(Rb5S.polarisability(wavels)/Cs6S.polarisability(wavels)), 
+arb_acs = abs(Rb5S.polarisability(wavels)/Cs6S.polarisability(wavels))
+ax2.semilogy(wavels*1e9, arb_acs, 
     color='tab:blue') # ratio
 ax2.plot(wavels*1e9, np.zeros(len(wavels)) + 
     Rb5S.polarisability(1064e-9)/Cs6S.polarisability(1064e-9), '--', color='tab:orange', 
     label='Ratio at 1064 nm') # compare value at 1064nm
+# get the min ratio that allows Cs to be deeper than 0.6mK and Rb to be 2x deeper in its own trap:
+ratio = Rb5S.polarisability(1064e-9)/Cs6S.polarisability(1064e-9) * 2 / 0.4
+wvlim = wavels[np.where(arb_acs > ratio)[0][-1]]*1e9  # greatest wavelength satisfying the condition
+print("""For Cs to have a combined trap < -0.6mK and Rb to experience a separated 
+trap depth 2x deeper in its own tweezer, the ratio of polarisabilities has to be
+ > %.4g
+which occurs at a wavelength of
+%.1f nm"""%(ratio, wvlim))
+ax2.fill_between([0, wvlim], 0.1, 50, color='tab:green', alpha=0.2) # show acceptable region
 ax2.legend()
 ax2.set_ylabel('Ratio of Rb / Cs\nPolarisability')
 ax2.set_ylim(0.1, 50)
@@ -89,7 +99,7 @@ def get_scattering_rates(I, wls):
             trapdepths.append(0.5*(obj.acStarkShift(0,0,0, wls, mj=1.5) + 
                         obj.acStarkShift(0,0,0, wls, mj=0.5)))
 
-    # scattering rate of Cs from the D1 and D2 lines:
+    # scattering rate of Cs ground state from the D1 and D2 lines:
     deltaCsD1 = 2*np.pi*c * (1/wls - 1/Cs.rwS[0]) # detuning from D1 (rad/s)
     deltaCsD2 = 2*np.pi*c * (1/wls - 1/Cs.rwS[35]) # detuning from D2 (rad/s)
     IsatCsD1 = 2.4981 *1e-3 *1e4 # saturation intensity for D1 transition, sigma polarised
@@ -102,7 +112,7 @@ def get_scattering_rates(I, wls):
     # duration in vibrational ground state (s) = 1/Lamb-Dicke^2 /Rsc
     Cst = 4*np.sqrt(Cs.m*abs(trapdepths[0])) / (2*np.pi/wls)**2 /hbar /Cswaist /CsRsc 
 
-    # scattering rate of Rb from the D1 line:
+    # scattering rate of Rb ground state from the D1 line:
     deltaRbD1 = 2*np.pi*c * (1/wls - 1/Rb.rwS[0]) # detuning from D1 (rad/s)
     IsatRbD1 = 4.484 *1e-3 *1e4 # saturation intensity for D1 transition, pi polarised
     RbRsc = Rb.lwS[0]/2. * I/IsatRbD1 / (1 + 4*(deltaRbD1/Rb.lwS[0])**2 + I/IsatRbD1) # per second
@@ -144,7 +154,7 @@ for Rsc, Rsc1064, color, symbol in [[RbRsc, RbRsc_Cs, 'tab:blue', 'Rb'], [CsRsc,
             '--', color=color, label=symbol+' at 880.2 nm') # for 1 mK Rb trap
     ax3.semilogy(wavels*1e9, np.zeros(len(wavels))+Rsc1064, 
             ':', color=color, label=symbol+' at 1064 nm')   # for 1 mK Cs trap
-# ax3.plot(wavels*1e9, np.zeros(len(wavels))+100, 'k--', alpha=0.25) # show acceptable region
+ax3.fill_between([lolim, uplim], 1, 1e5, color='tab:green', alpha=0.2) # show acceptable region
 ax3.set_ylabel('Scattering rate ($s^{-1}$)')
 ax3.set_ylim(1, 1e5)
 

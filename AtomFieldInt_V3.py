@@ -91,6 +91,9 @@ Also print the polarisability components in getStarkShift()
 27.03.19
 When looking at excited states with several possible mj values, average
 over the possible mj values.
+
+26.04.19
+Add in a function to calculate the scattering rate at a given wavelength
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -303,6 +306,14 @@ class dipole:
         self.I                          = nuclear_spin         # nuclear spin quantum number I
         self.field = Gauss(*field_properties)                  # combines all properties of the field
         self.X = symbol
+        if symbol == 'Cs':
+            self.Isats = np.array([24.981, 11.023]) # saturation intensities for D1, D2 transitions
+            self.Dlws = np.array([Cs.lwS[0], Cs.lwS[35]]) # linewidths for D1, D2 lines
+            self.Drws = np.array([Cs.rwS[0], Cs.rwS[35]]) # resonant wavelengths of D1, D2 lines
+        elif symbol == 'Rb':
+            self.Isats = np.array([44.84, 25.03])   # saturation intensities for D1, D2 transitions
+            self.Dlws = np.array([Rb.lwS[0], Rb.lwS[5]]) # linewidths for D1, D2 lines
+            self.Drws = np.array([Rb.rwS[0], Rb.rwS[5]]) # resonant wavelengths of D1, D2 lines
         
         self.states = transition_labels                 # (n,l,j) quantum numbers for transitions
         self.omega0 = np.array(resonant_frequencies)    # resonant frequencies (rad/s)
@@ -310,6 +321,23 @@ class dipole:
         self.D0s   = np.array(dipole_matrix_elements)   # D0 = -e <a|r|b> for displacement r along the polarization direction
         self.omegas = np.array(2*np.pi*c/self.field.lam)# laser frequencies (rad/s)
         
+    def scatRate(self, wavel=[], I=[]):
+        """Return the scattering rate at a given wavelength and intensity
+        Default uses the dipole object's wavelength and intensity
+        If wavelength and intensity are supplied, they should be the same length."""
+        if np.size(wavel) != 0: 
+            omegas = np.array(2*np.pi*c/wavel) # laser frequencies (rad/s)
+        else:
+            omegas = self.omegas
+        if np.size(I) == 0: # use intensity from field
+            I = 2 * self.field.P / np.pi / self.field.w0**2 # beam intensity
+
+        Rsc = 0
+        for i in range(len(self.Isats)):
+            deltas = omegas - 2 * np.pi * c / self.Drws[i] # detuning from D line
+            Rsc += self.Dlws[i]/2. * I/self.Isats[i] / (1 + 4*(deltas/self.Dlws[i])**2 + I/self.Isats[i])
+
+        return Rsc
             
     def acStarkShift(self, x, y, z, wavel=[], mj=None, HF=False):
         """Return the potential from the dipole interaction 

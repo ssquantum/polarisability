@@ -25,7 +25,7 @@ Cswl = 1064e-9      # wavelength of the Cs tweezer trap in m
 Rbwl = 815e-9       # wavelength of the Rb tweezer trap in m
 power = 20e-3       # power of Cs tweezer beam in W
 Cswaist = 1.2e-6    # beam waist for Cs in m
-Rbpower = power/12. # power of Rb tweezer beam in W 
+Rbpower = power*0.10 # power of Rb tweezer beam in W 
 Rbwaist = 0.9e-6    # beam waist fir Rb in m
 
     
@@ -61,7 +61,7 @@ print("""Condition 1: The combined trap depth must be > 0.6mK for Cs.
 Power ratio Rb / Cs < %.3g """%(P1Rb(Cswl, Rbwl) / power))
 
 # Stability condition 2: 
-factor = 1
+factor = 2
 def P2Rb(wlCs, wlRb, Cspower=power):
     """Condition 2: Rb is factor x more strongly attracted to its own tweezer"""
     return factor * Rb1064.polarisability(wlCs) * Cspower * Rbwaist**2 / Rb1064.polarisability(wlRb) / Cswaist**2
@@ -91,9 +91,9 @@ plt.xlabel('Wavelength (nm)')
 plt.ylabel('Power Ratio $P_{Rb}/P_{Cs}$')
 plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
 plt.ylim(min(ratio2), max(ratio1))
-plt.text(812, max(ratio2)*0.3, 'Upper limit at %.0f nm: %.3g'%(Rbwl*1e9, P1Rb(Cswl,Rbwl)/power),
+plt.text(812, max(ratio2)*0.25, 'Upper limit at %.0f nm: %.3g'%(Rbwl*1e9, P1Rb(Cswl,Rbwl)/power),
     color='tab:blue', bbox=dict(facecolor='white', edgecolor=None))
-plt.text(812, max(ratio2)*0.22, 'Lower limit at %.0f nm: %.3g'%(Rbwl*1e9, P2Rb(Cswl,Rbwl)/power),
+plt.text(812, max(ratio2)*0.21, 'Lower limit at %.0f nm: %.3g'%(Rbwl*1e9, P2Rb(Cswl,Rbwl)/power),
     color='tab:orange', bbox=dict(facecolor='white', edgecolor=None))
 plt.legend()
 
@@ -173,4 +173,26 @@ for atoms in [[Rb1064, Rb880], [Cs1064, Cs880]]:
     plt.ylabel('Trap Depth (mK)')
     ax.yaxis.set_major_locator(AutoLocator())
     
+# get a surface plot of the crossover wavelengths as a function of Rb wavelength and Cs beam power
+# wavels = np.linspace(800, 830, 100) * 1e-9 # wavelengths to consider in m
+# crossovers = []
+# pratio     = []
+# powers = np.linspace(7,20,50)*1e-3
+# for p in powers:
+#     ratio1 = P1Rb(Cswl, wavels, Cspower=p)/p # condition 1
+#     ratio2 = P2Rb(Cswl, wavels, Cspower=p)/p # condition 2
+#     diff = abs(ratio2 - ratio1)
+#     crossovers.append(wavels[np.argmin(diff)]) # wavelength where ratio1 crosses ratio2
+#     pratio.append(P1Rb(Cswl, wavels[np.argmin(diff)], Cspower=p)/p) # power ratio at crossover
+
+# fig, ax1 = plt.subplots()
+# ax1.plot(powers*1e3, np.array(crossovers)*1e9, 'ko')
+# ax1.set_xlabel('Cs beam power (mW)')
+# ax1.set_ylabel('Crossover wavelength (nm)')
+
+# ax2 = ax1.twinx()
+# ax2.plot(powers*1e3, pratio, 'x', color='tab:red') # power ratios at the crossover wavelength
+# ax2.set_ylabel('Power ratio ($P_{Rb}/P_{Cs}$)', color='tab:red')
+# ax2.tick_params(axis='y', labelcolor='tab:red')
+
 plt.show()
