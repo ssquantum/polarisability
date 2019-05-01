@@ -301,7 +301,7 @@ class dipole:
                     dipole_matrix_elements, resonant_frequencies, decay_rates,
                     transition_labels, nuclear_spin=7/2.,
                     symbol="Cs"):
-        self.m                          = mass * amu           # mass of the atom in kg
+        self.m                          = mass                 # mass of the atom in kg
         self.L, self.J, self.F, self.MF = spin_state           # spin quantum numbers L, J, F, M_F
         self.I                          = nuclear_spin         # nuclear spin quantum number I
         self.field = Gauss(*field_properties)                  # combines all properties of the field
