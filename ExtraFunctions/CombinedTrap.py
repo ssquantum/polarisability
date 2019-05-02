@@ -22,12 +22,13 @@ sys.path.append('..')
 from AtomFieldInt_V3 import (dipole, Rb, Cs, c, eps0, h, hbar, a0, e, me, 
     kB, amu, Eh, au)
 
-Cswl = 980e-9      # wavelength of the Cs tweezer trap in m
+Cswl = 1064e-9      # wavelength of the Cs tweezer trap in m
 Rbwl = 810e-9       # wavelength of the Rb tweezer trap in m
-power = 10e-3       # power of Cs tweezer beam in W
+power = 10.5e-3       # power of Cs tweezer beam in W
 Cswaist = 1.2e-6    # beam waist for Cs in m
-Rbpower = power*0.17 # power of Rb tweezer beam in W 
+Rbpower = power*0.11 # power of Rb tweezer beam in W 
 Rbwaist = 0.9e-6    # beam waist fir Rb in m
+minU0 = -0.6e-3*kB  # min acceptable combined trap depth for Cs
 
     
 # For the 1064nm trap: at Cs wavelength with Cs power and Cs beam waist
@@ -53,7 +54,7 @@ print("Rb tweezer wavelength: %.0f nm\t\tCs tweezer wavelength: %.0f nm\n"%(Cswl
 #     )/ (Rb1064.polarisability(Rbwl, mj=0.5) - Cs1064.polarisability(Rbwl, mj=0.5)) * power
 
 # Stability condition 1: 
-def P1Rb(wlCs, wlRb, U0min=-0.6e-3*kB, Cspower=power):
+def P1Rb(wlCs, wlRb, U0min=minU0, Cspower=power):
     """Condition 1: The combined trap depth must be > 0.6mK for Cs."""
     return abs((U0min*np.pi*eps0*c + Cs1064.polarisability(wlCs)*Cspower/Cswaist**2) 
                     * Rbwaist**2 / Cs1064.polarisability(wlRb))
@@ -69,13 +70,24 @@ def P3Rb(wlCs, wlRb, Cspower=power):
     """Condition 3: Cs is factor times more strongly attracted to its own tweezer"""
     return abs(Cs1064.polarisability(wlCs) * Cspower * Rbwaist**2 / Cs1064.polarisability(wlRb) / Cswaist**2 / factor)
 
-
-print("""Condition 1: The combined trap depth must be > 0.6mK for Cs.
-Power ratio Rb / Cs < %.3g """%(P1Rb(Cswl, Rbwl, Cspower=power) / power))
+print("""Condition 1: The combined trap depth must be > %.2f mK for Cs.
+Power ratio Rb / Cs < %.3g """%(minU0/kB*1e3, P1Rb(Cswl, Rbwl, Cspower=power) / power))
 print("Condition 2: Rb is "+str(factor)+"""x more strongly attracted to its own tweezer.
 Power ratio Rb / Cs > %.3g \n"""%(P2Rb(Cswl, Rbwl, power) / power))
 print("Condition 3: Cs is "+str(factor)+"""x more strongly attracted to its own tweezer.
 Power ratio Rb / Cs < %.3g \n"""%(P3Rb(Cswl, Rbwl, power) / power))
+
+print("Combine all 3 conditions to fix Cspower and then get limits on Rbpower:\n")
+Cspowermin = 2*abs(minU0) * np.pi*eps0*c * Cswaist**2 / Cs1064.polarisability(Cswl)
+print("Cs power > %.3g mW"%(Cspowermin*1e3))
+
+def getPRbmin(wlCs, wlRb, U0min=minU0, Cspower=power):
+    """Combine conditions 1, 2, and 3 to get the min Rb tweezer power"""
+    return factor**2 *Rb1064.polarisability(wlCs)/Rb1064.polarisability(wlRb)/Cs1064.polarisability(wlCs) * abs(U0min)*np.pi*eps0*c*Rbwaist**2
+
+def getPRbmax(wlCs, wlRb, U0min=minU0, Cspower=power):
+    """Combine conditions 1, 2, and 3 to get the max Rb tweezer power"""
+    return Rbwaist**2 * abs(U0min / Cs1064.polarisability(wlRb)) * np.pi*eps0*c
 
 # get the stability conditions as a function of wavelength
 wavels = np.linspace(795, 845, 200) * 1e-9 # wavelengths to consider in m
@@ -85,9 +97,9 @@ ratio3 = P3Rb(Cswl, wavels, Cspower=power)/power # condition 3
 diff1 = abs(ratio2 - ratio1)
 diff2 = abs(ratio3 - ratio2)
 crossover = wavels[np.argmin(diff1)] # wavelength where ratio1 crosses ratio2
-print("Stability conditions 1 and 2 crossover at %.1f nm\n"%(crossover*1e9))
+# print("Stability conditions 1 and 2 crossover at %.1f nm\n"%(crossover*1e9))
 crossover2 = wavels[np.argmin(diff2)] # wavelength where ratio2 crosses ratio3
-print("Stability conditions 1 and 2 crossover at %.1f nm\n"%(crossover2*1e9))
+# print("Stability conditions 1 and 2 crossover at %.1f nm\n"%(crossover2*1e9))
 both = np.concatenate((ratio1, ratio2))
 
 def plotc12():
@@ -128,6 +140,37 @@ def plotc23():
     plt.xlabel('Cs tweezer wavelength (nm)')
     plt.ylabel('Maximum Rb tweezer wavelength (nm)')
 
+
+# get the stability conditions as a function of wavelength
+wavels = np.linspace(795, 845, 200) * 1e-9 # wavelengths to consider in m
+PRbmin = getPRbmin(Cswl, wavels, Cspower=Cspowermin) # in W
+PRbmax = getPRbmax(Cswl, wavels, Cspower=Cspowermin) # in W
+diff = abs(PRbmin - PRbmax)
+crossover = wavels[np.argmin(diff)] # wavelength where PRbmin crosses PRbmax
+print("Combined stability conditions crossover at %.1f nm\n"%(crossover*1e9))
+both = np.concatenate((PRbmin, PRbmax))*1e3 # in mW
+
+def plotc123(Cspower=Cspowermin):
+    """plot the combined stability conditions as a function of wavelength"""
+    plt.figure()
+    plt.title('Threshold Conditions on $P_{Rb}$ when $P_{Cs}$ = %.3g mW'%(Cspower*1e3))
+    plt.plot(wavels*1e9, PRbmax*1e3, color='tab:blue', label='Maximum power')
+    plt.plot(wavels*1e9, PRbmin*1e3, color='tab:orange', label='Minimum power') 
+    plt.fill_between([crossover*1e9, wavels[-1]*1e9], min(both), max(both), color='tab:red', alpha=0.2)
+    plt.fill_between([wavels[0]*1e9, crossover*1e9], min(both), max(both), color='tab:green', alpha=0.2)
+    plt.xlabel('Wavelength (nm)')
+    plt.ylabel('Rb tweezer beam power $P_{Rb}$ (mW)')
+    plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
+    plt.ylim(min(PRbmin), max(PRbmax)*1.5e3)
+    plt.text(crossover*1e9, max(PRbmax)*0.24*1e3, 'Upper limit at %.0f nm: %.3g mW'%(Rbwl*1e9, 
+        getPRbmax(Cswl, Rbwl, Cspower=Cspower)*1e3),
+        color='tab:blue', bbox=dict(facecolor='white', edgecolor=None))
+    plt.text(crossover*1e9, max(PRbmax)*0.1*1e3, 'Lower limit at %.0f nm: %.3g mW'%(Rbwl*1e9, 
+        getPRbmin(Cswl, Rbwl, Cspower=Cspower)*1e3),
+        color='tab:orange', bbox=dict(facecolor='white', edgecolor=None))
+    plt.legend()
+
+
 # for the 880nm trap:
 # ground state Rb 5 S 1/2
 Rb880 = dipole(Rb.m, (0,1/2.,1,1), [Rbwl, abs(Rbpower), Rbwaist], 
@@ -155,6 +198,25 @@ Rbpopt, Rbpcov = curve_fit(quad, xpos, UCRb, p0=(1,U0Rb), maxfev=80000) # popt: 
 Cspopt, Cspcov = curve_fit(quad, xpos, UCCs, p0=(1,U0Cs), maxfev=80000)
 wrRb = np.sqrt(abs(Rbpopt[0])*2 / Rb.m) /2./np.pi / 1e3  # radial trapping frequency for Rb in kHz
 wrCs = np.sqrt(abs(Cspopt[0])*2 / Cs.m) /2./np.pi / 1e3  # radial trapping frequency for Cs in KHz
+
+def checkfit():
+    """Graph showing the fitted quadratic to prove that it's good"""
+    xtra = np.linspace(-xmax*5, xmax*5, 200)  # extend the range 
+    UCRb  = Rb1064.acStarkShift(xtra,0,0) + Rb880.acStarkShift(xtra,0,0)  # Rb potential in combined trap
+    UCCs  = Cs1064.acStarkShift(xtra,0,0) + Cs880.acStarkShift(xtra,0,0)  # Cs potential in combined trap
+    plt.figure()
+    plt.plot(xtra*1e6, UCRb/kB*1e3, 'tab:blue', label='Rb')
+    plt.plot(xtra*1e6, quad(xtra, *Rbpopt)/kB*1e3, '--', color='tab:blue')
+    plt.plot(xtra*1e6, UCCs/kB*1e3, 'tab:orange', label='Cs')
+    plt.plot(xtra*1e6, quad(xtra, *Cspopt)/kB*1e3, '--', color='tab:orange')
+    plt.xlabel('Radial Position ($\mu m$)')
+    plt.ylabel('Dipole Potential (mK)')
+    both = np.concatenate((UCRb/kB*1e3, UCCs/kB*1e3))
+    plt.ylim((min(both), max(both)))
+    plt.legend()
+    plt.show()
+
+
 # note: if the Cs potential has a dimple from the repulsive Rb component then it might just fit
 # to this part, giving a much lower trapping frequency than it should have.
 print("%.0f beam power: %.3g mW\t\t%.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, Rbpower*1e3))
@@ -248,17 +310,23 @@ if __name__ == "__main__":
     # only plot if the user passes a second argument, this acts like verbosity level
     # e.g. python CombinedTrap.py 1
     if np.size(sys.argv) > 1:
-        if any([argv == '1' for argv in sys.argv]):
+        if any([argv == '0' for argv in sys.argv]):
             plotc12() # threshold conditions 1 and 2
-        elif any([argv == '2' for argv in sys.argv]):
+        if any([argv == '1' for argv in sys.argv]):
             plotc23() # Rbwl vs Cswl from threshold conditions 2 and 3
-        elif any([argv == '3' for argv in sys.argv]):
+        if any([argv == '2' for argv in sys.argv]):
+            plotc123() # PRb vs wavelength from all threshold conditions
+        if any([argv == '3' for argv in sys.argv]):
             plotmerge() # merging tweezers
-        elif any([argv == '4' for argv in sys.argv]):
+        if any([argv == '4' for argv in sys.argv]):
             plotcross12() # Rbwl vs PCs from threshold conditions 2 and 3
-        elif any([argv == 'all' for argv in sys.argv]):
-            plotc12()
-            plotc23()
+        if any([argv == '5' for argv in sys.argv]):
+            checkfit() # CHeck the fit of the quadratic to the combined potential
+        if any([argv == 'all' for argv in sys.argv]):
+            # plotc12()
+            # plotc23()
+            checkfit()
+            plotc123()
             plotmerge()
             plotcross12()
         plt.show()
