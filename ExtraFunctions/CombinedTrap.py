@@ -22,12 +22,14 @@ sys.path.append('..')
 from AtomFieldInt_V3 import (dipole, Rb, Cs, c, eps0, h, hbar, a0, e, me, 
     kB, amu, Eh, au)
 
+afu = 2 * np.pi * 1e3 # convert from angular frequency to kHz
+
 Cswl = 1064e-9      # wavelength of the Cs tweezer trap in m
-Rbwl = 810e-9       # wavelength of the Rb tweezer trap in m
+Rbwl = 807e-9       # wavelength of the Rb tweezer trap in m
 power = 10.5e-3       # power of Cs tweezer beam in W
 Cswaist = 1.2e-6    # beam waist for Cs in m
-Rbpower = power*0.11 # power of Rb tweezer beam in W 
-Rbwaist = 0.9e-6    # beam waist fir Rb in m
+Rbpower = power*0.2 # power of Rb tweezer beam in W 
+Rbwaist = 1.2e-6    # beam waist fir Rb in m
 minU0 = -0.6e-3*kB  # min acceptable combined trap depth for Cs
 
     
@@ -184,6 +186,11 @@ Cs880 = dipole(Cs.m, (0,1/2.,3,3), [Rbwl, abs(Rbpower), Rbwaist],
                 nuclear_spin = Cs.I,
                 symbol=Cs.X)
                 
+def getLD(atom, wtrap):
+    """Return the Lamb-Dicke paramter for a given dipole object in a 
+    trap with trapping frequency wtrap
+    eta = sqrt(w_recoil / w_trap)"""
+    return atom.field.k * np.sqrt(hbar/2./atom.m / wtrap)
 
 # in the trap with both tweezers overlapping: 
 U0Rb = Rb1064.acStarkShift(0,0,0) + Rb880.acStarkShift(0,0,0)
@@ -196,8 +203,12 @@ UCCs  = Cs1064.acStarkShift(xpos,0,0) + Cs880.acStarkShift(xpos,0,0)  # Cs poten
 quad = lambda x, a, c: a*x**2 + c
 Rbpopt, Rbpcov = curve_fit(quad, xpos, UCRb, p0=(1,U0Rb), maxfev=80000) # popt: (gradient, offset)
 Cspopt, Cspcov = curve_fit(quad, xpos, UCCs, p0=(1,U0Cs), maxfev=80000)
-wrRb = np.sqrt(abs(Rbpopt[0])*2 / Rb.m) /2./np.pi / 1e3  # radial trapping frequency for Rb in kHz
-wrCs = np.sqrt(abs(Cspopt[0])*2 / Cs.m) /2./np.pi / 1e3  # radial trapping frequency for Cs in KHz
+wrRb = np.sqrt(abs(Rbpopt[0])*2 / Rb.m)            # radial trapping frequency for Rb in rad/s
+ldRb = getLD(Rb880, wrRb)                          # Lamb-Dicke parameter 
+wrRb /= afu                                        # in kHz
+wrCs = np.sqrt(abs(Cspopt[0])*2 / Cs.m)            # radial trapping frequency for Cs in rad/s
+ldCs = getLD(Cs1064, wrCs)                         # Lamb-Dicke parameter 
+wrCs /= afu                                        # in kHz
 
 def checkfit():
     """Graph showing the fitted quadratic to prove that it's good"""
@@ -205,16 +216,39 @@ def checkfit():
     UCRb  = Rb1064.acStarkShift(xtra,0,0) + Rb880.acStarkShift(xtra,0,0)  # Rb potential in combined trap
     UCCs  = Cs1064.acStarkShift(xtra,0,0) + Cs880.acStarkShift(xtra,0,0)  # Cs potential in combined trap
     plt.figure()
-    plt.plot(xtra*1e6, UCRb/kB*1e3, 'tab:blue', label='Rb')
+    plt.plot(xtra*1e6, UCRb/kB*1e3, 'tab:blue', label='Rb $\omega_r = %.3g$ kHz'%wrRb)
     plt.plot(xtra*1e6, quad(xtra, *Rbpopt)/kB*1e3, '--', color='tab:blue')
-    plt.plot(xtra*1e6, UCCs/kB*1e3, 'tab:orange', label='Cs')
+    plt.plot(xtra*1e6, UCCs/kB*1e3, 'tab:orange', label='Cs $\omega_r = %.3g$ kHz'%wrCs)
     plt.plot(xtra*1e6, quad(xtra, *Cspopt)/kB*1e3, '--', color='tab:orange')
     plt.xlabel('Radial Position ($\mu m$)')
     plt.ylabel('Dipole Potential (mK)')
     both = np.concatenate((UCRb/kB*1e3, UCCs/kB*1e3))
     plt.ylim((min(both), max(both)))
     plt.legend()
-    plt.show()
+
+def axialfit():
+    """Graph fitting a quadratic to the potential in the axial direction"""
+    zmax = max([Cswaist,Rbwaist])  # only harmonic near the bottom
+    zpos = np.linspace(-zmax, zmax, 200) # x position in m
+    UCRb  = Rb1064.acStarkShift(0,0,zpos) + Rb880.acStarkShift(0,0,zpos)  # Rb potential in combined trap
+    UCCs  = Cs1064.acStarkShift(0,0,zpos) + Cs880.acStarkShift(0,0,zpos)  # Cs potential in combined trap
+    Rbpopt, _ = curve_fit(quad, zpos, UCRb, p0=(1,U0Rb), maxfev=80000) # popt: (gradient, offset)
+    Cspopt, _ = curve_fit(quad, zpos, UCCs, p0=(1,U0Cs), maxfev=80000)
+    wzRb = np.sqrt(abs(Rbpopt[0])*2 / Rb.m) /afu           # axial trapping frequency for Rb in kHz
+    wzCs = np.sqrt(abs(Cspopt[0])*2 / Cs.m) /afu           # axial trapping frequency for Cs in kHz
+    zxtra = np.linspace(-zmax*5, zmax*5, 200)  # extend the range 
+    UCRb  = Rb1064.acStarkShift(0,0,zxtra) + Rb880.acStarkShift(0,0,zxtra)  # Rb potential in combined trap
+    UCCs  = Cs1064.acStarkShift(0,0,zxtra) + Cs880.acStarkShift(0,0,zxtra)  # Cs potential in combined trap
+    plt.figure()
+    plt.plot(zxtra*1e6, UCRb/kB*1e3, 'tab:blue', label=r'Rb $\omega_z=%.3g$ kHz, $\eta=%.2g$'%(wzRb, getLD(Rb880, wzRb*afu)))
+    plt.plot(zxtra*1e6, quad(zxtra, *Rbpopt)/kB*1e3, '--', color='tab:blue')
+    plt.plot(zxtra*1e6, UCCs/kB*1e3, 'tab:orange', label=r'Cs $\omega_z = %.3g$ kHz, $\eta=%.2g$'%(wzCs, getLD(Cs1064, wzCs*afu)))
+    plt.plot(zxtra*1e6, quad(zxtra, *Cspopt)/kB*1e3, '--', color='tab:orange')
+    plt.xlabel(r'Axial Position ($\mu m$)')
+    plt.ylabel('Dipole Potential (mK)')
+    both = np.concatenate((UCRb/kB*1e3, UCCs/kB*1e3))
+    plt.ylim((min(both), max(both)))
+    plt.legend()
 
 
 # note: if the Cs potential has a dimple from the repulsive Rb component then it might just fit
@@ -222,23 +256,25 @@ def checkfit():
 print("%.0f beam power: %.3g mW\t\t%.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, Rbpower*1e3))
 print("""In the combined %.0fnm and %.0fnm trap:
 Rubidium:       trap depth %.3g mK
-                radial trapping frequency %.0f kHz 
+                radial trapping frequency %.0f kHz, Lamb-Dicke parameter %.3g 
 Caesium:        trap depth %.3g mK
-                radial trapping frequency %.0f kHz"""%(Rbwl*1e9, Cswl*1e9, U0Rb/kB*1e3, wrRb, U0Cs/kB*1e3, wrCs))
+                radial trapping frequency %.0f kHz, Lamb-Dicke parameter %.3g"""%(
+                    Rbwl*1e9, Cswl*1e9, U0Rb/kB*1e3, wrRb, ldRb, U0Cs/kB*1e3, wrCs, ldCs))
 
 # with just the Cs tweezer trap:
 def trap_freq(atom):
     """Get the trapping frequency of a dipole object"""
     return np.sqrt(4*abs(atom.acStarkShift(0,0,0)) / atom.m / atom.field.w0**2)
 
-wrRb1064 = trap_freq(Rb1064) /2. /np.pi /1e3
-wrCs1064 = trap_freq(Cs1064) /2. /np.pi /1e3
+wrRb1064 = trap_freq(Rb1064)  # Rb trapping frequency in 1064nm trap in rad/s
+wrCs1064 = trap_freq(Cs1064)  # Cs trapping frequency in 1064nm trap in rad/s
 print("""\nIn just the %.0fnm trap:
 Rubidium:       trap depth %.3g mK
-                radial trapping frequency %.0f kHz
+                radial trapping frequency %.0f kHz, Lamb-Dicke parameter %.3g 
 Caesium:        trap depth %.3g mK
-                radial trapping frequency %.0f kHz"""%(Cswl*1e9, abs(Rb1064.acStarkShift(0,0,0)/kB*1e3), 
-                wrRb1064, abs(Cs1064.acStarkShift(0,0,0)/kB*1e3), wrCs1064))
+                radial trapping frequency %.0f kHz, Lamb-Dicke parameter %.3g """%(
+                Cswl*1e9, Rb1064.acStarkShift(0,0,0)/kB*1e3, wrRb1064/afu, getLD(Rb1064, wrRb1064),
+                Cs1064.acStarkShift(0,0,0)/kB*1e3, wrCs1064/afu, getLD(Cs1064, wrCs1064)))
 
 def plotmerge(n=3):
     """plot merging traps with n timesteps"""
@@ -269,9 +305,9 @@ def plotmerge(n=3):
         +"\n%.0f beam power: %.3g mW   %.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, Rbpower*1e3),
                     pad = 25)
                 plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
-                ax.text(xs[0]*1e6, 0, '$\omega = %.0f$ kHz'%(trap_freq(atoms[0])/2./np.pi/1e3), 
+                ax.text(xs[0]*1e6, 0, '$\omega = %.0f$ kHz'%(trap_freq(atoms[0])/afu), 
                                                         bbox=dict(facecolor='white', edgecolor=None))
-                ax.text(sep[-1]*1e6,0,'$\omega = %.0f$ kHz'%(trap_freq(atoms[1])/2./np.pi/1e3), 
+                ax.text(sep[-1]*1e6,0,'$\omega = %.0f$ kHz'%(trap_freq(atoms[1])/afu), 
                                                         bbox=dict(facecolor='white', edgecolor=None))
         
             
@@ -321,11 +357,14 @@ if __name__ == "__main__":
         if any([argv == '4' for argv in sys.argv]):
             plotcross12() # Rbwl vs PCs from threshold conditions 2 and 3
         if any([argv == '5' for argv in sys.argv]):
-            checkfit() # CHeck the fit of the quadratic to the combined potential
+            checkfit() # Check the fit of the quadratic to the combined potential
+        if any([argv == '6' for argv in sys.argv]):
+            axialfit() # fit to the potential in the  axial direction 
         if any([argv == 'all' for argv in sys.argv]):
             # plotc12()
             # plotc23()
             checkfit()
+            axialfit()
             plotc123()
             plotmerge()
             plotcross12()
