@@ -26,9 +26,9 @@ afu = 2 * np.pi * 1e3 # convert from angular frequency to kHz
 
 Cswl = 1064e-9      # wavelength of the Cs tweezer trap in m
 Rbwl = 807e-9       # wavelength of the Rb tweezer trap in m
-power = 10.5e-3       # power of Cs tweezer beam in W
+power = 18e-3       # power of Cs tweezer beam in W
 Cswaist = 1.2e-6    # beam waist for Cs in m
-Rbpower = power*0.2 # power of Rb tweezer beam in W 
+Rbpower = power*0.209 # power of Rb tweezer beam in W 
 Rbwaist = 1.2e-6    # beam waist fir Rb in m
 minU0 = -0.6e-3*kB  # min acceptable combined trap depth for Cs
 
