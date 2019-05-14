@@ -366,7 +366,7 @@ def getMFStarkShifts():
     """Return the Stark shifts of the MF states for Cs cooling/repump transitions"""
     
     print("stark shift of Cs 6S1/2 -> 6P3/2 for different MF states at 1064nm for beam power 6 mW, beam waist 1 micron, giving trap depth 1 mK")
-    bprop = [1064e-9, 6e-3, 1e-6]      # wavelength, beam power, beam waist
+    bprop = [1064e-9, 6.08150239e-3, 1e-6]      # wavelength, beam power, beam waist
     
     plt.figure()
     # colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -396,6 +396,51 @@ def getMFStarkShifts():
     lines = plt.gca().lines
     plt.legend(lines[18:24], ['F='+str(f)+', $\Delta M_F=$'+str(-dmf) for f in range(3,5) for dmf in range(-1,2)])
     plt.show()        
+
+def plotPolarisability():
+    """Plot the polarisability of Rb 5S and Cs 6S states highlighting our laser wavelengths"""
+    bprop = [1064e-9, 6e-3, 1e-6]      # wavelength, beam power, beam waist
+    wavelengths = np.linspace(700, 1100, 500)*1e-9 # in m
+    ymax = 5000
+    
+    # groundstate rubidium
+    Rb5S = dipole(Rb.m, (0,1/2.,1,1), bprop,
+                    Rb.D0S, Rb.w0S, Rb.lwS, Rb.nljS,
+                    nuclear_spin = Rb.I,
+                    symbol=Rb.X)
+    alphaRb = Rb5S.polarisability(wavelengths)/au # polarisability in atomic units
+                    
+    # groundstate caesium
+    Cs6S = dipole(Cs.m, (0,1/2.,4,4), bprop,
+                    Cs.D0S, Cs.w0S, Cs.lwS, Cs.nljS,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)
+    alphaCs = Cs6S.polarisability(wavelengths)/au # polarisability in atomic units
+            
+    plt.figure()
+    # split up the plotting so as not to have lines at resonances:
+    for v in [[alphaRb, 'tab:blue', 'Rb 5S$_{1/2}$'], [alphaCs, 'tab:orange', 'Cs 6S$_{1/2}$']]:
+        plus = np.where(v[0] > 0)[0] # where polarisability is positive
+        ind1 = plus[np.where(plus > np.arange(len(plus))+plus[0])[0][0]] # second positive region
+        plt.plot(wavelengths[:plus[0]-1]*1e9, v[0][:plus[0]-1], color=v[1], label=v[2])
+        plt.plot(wavelengths[plus[0]+1:ind1-1]*1e9, v[0][plus[0]+1:ind1-1], color=v[1])
+        plt.plot(wavelengths[ind1+1:]*1e9, v[0][ind1+1:], color=v[1])
+
+    # show zero crossing
+    plt.plot([wavelengths[0]*1e9, wavelengths[-1]*1e9], [0,0], 'k--', alpha=0.4)
+    # show laser wavelengths
+    plt.fill_between([1060,1070], ymax, -ymax, color='tab:orange', alpha=0.3)
+    plt.fill_between([935,945], ymax, -ymax, color='tab:orange', alpha=0.3)
+    plt.fill_between([878, 882], ymax, -ymax, color='tab:blue', alpha=0.3)
+    plt.fill_between([805,825], ymax, -ymax, color='tab:blue', alpha=0.3)
+    plt.ylim((-ymax, ymax))
+    plt.ylabel('Polarisability ($a_0^3$)')
+    plt.xlim((wavelengths[0]*1e9, wavelengths[-1]*1e9))
+    plt.xlabel('Wavelength (nm)')
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
         
 if __name__ == "__main__":
     wavelength = 1064e-9 # wavelength in m
@@ -417,7 +462,7 @@ if __name__ == "__main__":
     print(np.array(Rb5P3.polarisability(795e-9, HF=True, split=True))/au)
     
     # combinedTrap(power=6e-3)
-    # getMFStarkShifts()
+    getMFStarkShifts()
                     
     # compare Kien 2013 Fig 4,5:
     # wls = [np.linspace(680, 690, 200)*1e-9, np.linspace(930, 940, 200)*1e-9]

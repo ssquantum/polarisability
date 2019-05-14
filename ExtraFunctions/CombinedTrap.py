@@ -26,11 +26,14 @@ afu = 2 * np.pi * 1e3 # convert from angular frequency to kHz
 
 Cswl = 1064e-9      # wavelength of the Cs tweezer trap in m
 Rbwl = 807e-9       # wavelength of the Rb tweezer trap in m
-power = 18e-3       # power of Cs tweezer beam in W
+power = 14e-3       # power of Cs tweezer beam in W
 Cswaist = 1.2e-6    # beam waist for Cs in m
-Rbpower = power*0.209 # power of Rb tweezer beam in W 
+Rbpower = power*0.2 # power of Rb tweezer beam in W 
 Rbwaist = 1.2e-6    # beam waist fir Rb in m
 minU0 = -0.6e-3*kB  # min acceptable combined trap depth for Cs
+factorRb = 2        # how much deeper the Rb must be in its own trap
+factorCs = 2        # how much deeper the Cs must be in its own trap
+wavels = np.linspace(805, 825, 200) * 1e-9 # wavelengths to consider for Rb trap, in m
 
     
 # For the 1064nm trap: at Cs wavelength with Cs power and Cs beam waist
@@ -62,37 +65,35 @@ def P1Rb(wlCs, wlRb, U0min=minU0, Cspower=power):
                     * Rbwaist**2 / Cs1064.polarisability(wlRb))
 
 # Stability condition 2: 
-factor = 2
-def P2Rb(wlCs, wlRb, Cspower=power):
+def P2Rb(wlCs, wlRb, Cspower=power, fRb=factorRb):
     """Condition 2: Rb is factor times more strongly attracted to its own tweezer"""
-    return factor * Rb1064.polarisability(wlCs) * Cspower * Rbwaist**2 / Rb1064.polarisability(wlRb) / Cswaist**2
+    return fRb * Rb1064.polarisability(wlCs) * Cspower * Rbwaist**2 / Rb1064.polarisability(wlRb) / Cswaist**2
 
 # Stability condition 3:
-def P3Rb(wlCs, wlRb, Cspower=power):
+def P3Rb(wlCs, wlRb, Cspower=power, fCs=factorCs):
     """Condition 3: Cs is factor times more strongly attracted to its own tweezer"""
-    return abs(Cs1064.polarisability(wlCs) * Cspower * Rbwaist**2 / Cs1064.polarisability(wlRb) / Cswaist**2 / factor)
+    return abs(Cs1064.polarisability(wlCs) * Cspower * Rbwaist**2 / Cs1064.polarisability(wlRb) / Cswaist**2 / fCs)
 
 print("""Condition 1: The combined trap depth must be > %.2f mK for Cs.
 Power ratio Rb / Cs < %.3g """%(minU0/kB*1e3, P1Rb(Cswl, Rbwl, Cspower=power) / power))
-print("Condition 2: Rb is "+str(factor)+"""x more strongly attracted to its own tweezer.
+print("Condition 2: Rb is "+str(factorRb)+"""x more strongly attracted to its own tweezer.
 Power ratio Rb / Cs > %.3g \n"""%(P2Rb(Cswl, Rbwl, power) / power))
-print("Condition 3: Cs is "+str(factor)+"""x more strongly attracted to its own tweezer.
+print("Condition 3: Cs is "+str(factorCs)+"""x more strongly attracted to its own tweezer.
 Power ratio Rb / Cs < %.3g \n"""%(P3Rb(Cswl, Rbwl, power) / power))
 
 print("Combine all 3 conditions to fix Cspower and then get limits on Rbpower:\n")
-Cspowermin = 2*abs(minU0) * np.pi*eps0*c * Cswaist**2 / Cs1064.polarisability(Cswl)
+Cspowermin = factorCs*abs(minU0) * np.pi*eps0*c * Cswaist**2 / Cs1064.polarisability(Cswl)
 print("Cs power > %.3g mW"%(Cspowermin*1e3))
 
 def getPRbmin(wlCs, wlRb, U0min=minU0, Cspower=power):
     """Combine conditions 1, 2, and 3 to get the min Rb tweezer power"""
-    return factor**2 *Rb1064.polarisability(wlCs)/Rb1064.polarisability(wlRb)/Cs1064.polarisability(wlCs) * abs(U0min)*np.pi*eps0*c*Rbwaist**2
+    return factorRb*factorCs *Rb1064.polarisability(wlCs)/Rb1064.polarisability(wlRb)/Cs1064.polarisability(wlCs) * abs(U0min)*np.pi*eps0*c*Rbwaist**2
 
 def getPRbmax(wlCs, wlRb, U0min=minU0, Cspower=power):
     """Combine conditions 1, 2, and 3 to get the max Rb tweezer power"""
-    return Rbwaist**2 * abs(U0min / Cs1064.polarisability(wlRb)) * np.pi*eps0*c
+    return factorCs/factorRb * Rbwaist**2 * abs(U0min / Cs1064.polarisability(wlRb)) * np.pi*eps0*c
 
 # get the stability conditions as a function of wavelength
-wavels = np.linspace(795, 845, 200) * 1e-9 # wavelengths to consider in m
 ratio1 = P1Rb(Cswl, wavels, Cspower=power)/power # condition 1
 ratio2 = P2Rb(Cswl, wavels, Cspower=power)/power # condition 2
 ratio3 = P3Rb(Cswl, wavels, Cspower=power)/power # condition 3
@@ -112,7 +113,7 @@ def plotc12():
     plt.plot(wavels*1e9, ratio1, color='tab:blue', 
         label='Upper Limit from $U_{Cs}$ < -0.6 mK')
     plt.plot(wavels*1e9, ratio2, color='tab:orange',
-        label='Lower Limit from $U_{Rb}(\lambda) > %s U_{Rb}$(%.0f nm)'%(factor, Cswl*1e9)) 
+        label='Lower Limit from $U_{Rb}(\lambda) > %s U_{Rb}$(%.0f nm)'%(factorRb, Cswl*1e9)) 
     plt.fill_between([crossover*1e9, wavels[-1]*1e9], min(both), max(both), color='tab:red', alpha=0.2)
     plt.fill_between([wavels[0]*1e9, crossover*1e9], min(both), max(both), color='tab:green', alpha=0.2)
     plt.xlabel('Wavelength (nm)')
@@ -125,22 +126,43 @@ def plotc12():
         color='tab:orange', bbox=dict(facecolor='white', edgecolor=None))
     plt.legend()
 
-def plotc23():
+def plotc23(fCs=factorCs, fRb=factorRb, p=power, ls='ko', label='', newfig=True):
     """plot the stability conditions as a function of wavelength for
     conditions 2 and 3"""
-    Cswavels = np.linspace(930, 1070, 100)*1e-9 # Cs wavelengths in m
+    Cswavels = np.linspace(930, 1070, 50)*1e-9 # Cs wavelengths in m
     crosswls = np.zeros(len(Cswavels))
     for i in range(len(Cswavels)):
-        r2 = P2Rb(Cswavels[i], wavels, power)/power # condition 2
-        r3 = P3Rb(Cswavels[i], wavels, power)/power # condition 3
+        r2 = P2Rb(Cswavels[i], wavels, Cspower=p, fRb=fRb) # condition 2
+        r3 = P3Rb(Cswavels[i], wavels, Cspower=p, fCs=fCs) # condition 3
         d2 = abs(r3 - r2)
         crosswls[i] = wavels[np.argmin(d2)] # crossover wavelength in m
-
+    # since search for crossover wavelength is discretised, only take unique values
+    crosswls, idx, occ = np.unique(crosswls, return_index=True, return_counts=True)
+    Cswavels = Cswavels[idx + occ//2] # take the middle value when there are multiple occurences
+    # plot the results
+    if newfig:
+        plt.figure()
+        plt.title('Threshold conditions on Rb tweezer wavelength')
+        plt.xlabel('Cs tweezer wavelength (nm)')
+        plt.ylabel('Maximum Rb tweezer wavelength (nm)')
+    plt.plot(Cswavels*1e9, crosswls*1e9, ls, label=label)
+    
+def plotcvary():
+    """Vary the factors in the stability conditions to see how the plot of 
+    max Rb tweezer wavelength against Cs tweezer wavelength varies"""
+    csfactors = [2,1.5,2,1.5]
+    rbfactors = [2,2,1.5,1.5]
+    labels = ['$f_{Cs}=%s, f_{Rb}=%s$'%(csfactors[i],rbfactors[i]) for i in range(len(csfactors))]
+    linestyles = ['ko', 'r^', 'gP', 'mX']
     plt.figure()
-    plt.title('Threshold conditions on Rb tweezer wavelength')
-    plt.plot(Cswavels*1e9, crosswls*1e9, 'ko')
+    plt.title('Vary the required ratio between trap depths')
     plt.xlabel('Cs tweezer wavelength (nm)')
     plt.ylabel('Maximum Rb tweezer wavelength (nm)')
+    for i in range(len(labels)):
+        plotc23(fCs=csfactors[i], fRb=rbfactors[i], ls=linestyles[i], 
+                    label=labels[i], newfig=False)
+    plt.legend()
+                
 
 
 # get the stability conditions as a function of wavelength
@@ -269,12 +291,13 @@ def trap_freq(atom):
 wrRb1064 = trap_freq(Rb1064)  # Rb trapping frequency in 1064nm trap in rad/s
 wrCs1064 = trap_freq(Cs1064)  # Cs trapping frequency in 1064nm trap in rad/s
 print("""\nIn just the %.0fnm trap:
-Rubidium:       trap depth %.3g mK
+Rubidium:       trap depth %.3g mK, scattering rate %.3g Hz
                 radial trapping frequency %.0f kHz, Lamb-Dicke parameter %.3g 
-Caesium:        trap depth %.3g mK
+Caesium:        trap depth %.3g mK, scattering rate %.3g Hz
                 radial trapping frequency %.0f kHz, Lamb-Dicke parameter %.3g """%(
-                Cswl*1e9, Rb1064.acStarkShift(0,0,0)/kB*1e3, wrRb1064/afu, getLD(Rb1064, wrRb1064),
-                Cs1064.acStarkShift(0,0,0)/kB*1e3, wrCs1064/afu, getLD(Cs1064, wrCs1064)))
+                Cswl*1e9, Rb1064.acStarkShift(0,0,0)/kB*1e3, Rb1064.scatRate(1064e-9, Cs1064.field.I),
+                wrRb1064/afu, getLD(Rb1064, wrRb1064), Cs1064.acStarkShift(0,0,0)/kB*1e3, 
+                Cs1064.scatRate(), wrCs1064/afu, getLD(Cs1064, wrCs1064)))
 
 def plotmerge(n=3):
     """plot merging traps with n timesteps"""
@@ -283,10 +306,16 @@ def plotmerge(n=3):
 
     for atoms in [[Rb1064, Rb880, wrRb], [Cs1064, Cs880, wrCs]]:
         plt.figure(figsize=(6,7.5))
-        plt.subplots_adjust(hspace=0.01)
+        plt.subplots_adjust(hspace=0.02)
         
         for i in range(n):
             ax = plt.subplot2grid((n,1), (i,0))
+            if atoms[0].X == 'Rb':
+                minU0 = (atoms[0].acStarkShift(0,0,0) + atoms[1].acStarkShift(0,0,0))/kB*1.1e3
+                maxU0 = 0.16
+            elif atoms[0].X=='Cs':
+                minU0 = atoms[0].acStarkShift(0,0,0)/kB*1.1e3
+                maxU0 = atoms[1].acStarkShift(0,0,0)/kB*1.1e3
             # combined potential along the beam axis:
             U = (atoms[0].acStarkShift(xs,0,0) + atoms[1].acStarkShift(xs-sep[n-i-1],0,0))/kB*1e3 
             U1064 = atoms[0].acStarkShift(xs,0,0)/kB*1e3         # potential in the 1064 trap
@@ -295,12 +324,19 @@ def plotmerge(n=3):
             plt.plot(xs*1e6, U1064, color='tab:orange', alpha=0.6)
             plt.plot(xs*1e6, U880, color='tab:blue', alpha=0.6)
             allU = np.concatenate((U, U1064, U880))
-            plt.plot([0]*2, [min(allU),max(allU)], color='tab:orange', linewidth=10, label='%.0f'%(Cswl*1e9), alpha=0.4)
-            plt.plot([sep[n-i-1]*1e6]*2, [min(allU),max(allU)], color='tab:blue', linewidth=10, label='%.0f'%(Rbwl*1e9), alpha=0.4)
+            plt.plot([0]*2, [minU0,maxU0], color='tab:orange', linewidth=10, label='%.0f'%(Cswl*1e9), alpha=0.4)
+            plt.plot([sep[n-i-1]*1e6]*2, [minU0,maxU0], color='tab:blue', linewidth=10, label='%.0f'%(Rbwl*1e9), alpha=0.4)
             ax.set_xticks([])
-            ax.set_yticks([])
+            ax.set_ylim((minU0,maxU0))
+            ax.set_xlim((xs[0]*1e6, xs[-1]*1e6))
+            # ax.set_yticks([])
+            
 
             if i == 0:
+                # if atoms[0].X == 'Rb':
+                #     ax.set_title('a)', pad=25)
+                # elif atoms[0].X == 'Cs':
+                #     ax.set_title('b)', pad=25)
                 ax.set_title("Optical potential experienced by "+atoms[0].X
         +"\n%.0f beam power: %.3g mW   %.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, Rbpower*1e3),
                     pad = 25)
