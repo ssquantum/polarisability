@@ -864,6 +864,44 @@ def getMFStarkShifts():
     plt.legend(lines[18:24], ['F='+str(f)+r', $\Delta M_F=$'+str(-dmf) for f in range(3,5) for dmf in range(-1,2)])
     plt.show()
 
+''' rvb 15.05.2019: I've just added this function so I can work out lightshifts for the LGM -
+    haven't changed anything else! '''
+def vmfSS():
+    """Return the Stark shifts of the MF states for Cs cooling/repump transitions"""
+    
+    print("stark shift of Cs 6S1/2 -> 6P3/2 for different MF states at 1064nm for beam power 6 mW, beam waist 1 micron, giving trap depth 1 mK")
+    bprop = [1064e-9, 6e-3, 1e-6]      # wavelength, beam power, beam waist
+    
+    plt.figure()
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    for F in [3, 4]:
+        for MF in range(-F, F+1):
+            print(" ----- |F = "+str(F)+", m_F = "+str(MF)+">")
+            for MFp in range(MF-1, MF+2):
+                S = dipole(Cs.m, (0,1/2.,F,MF), bprop,
+                    Cs.D0S, Cs.w0S, Cs.lwS, Cs.nljS,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)
+                P = dipole(Cs.m, (1,3/2.,F+1,MFp), bprop,
+                    Cs.D0P3, Cs.w0P3, Cs.lwP3, Cs.nljP3,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)
+                Sshift = S.acStarkShift(0,0,0, bprop[0], HF=True)/h/1e6
+                Pshift = P.acStarkShift(0,0,0, bprop[0], HF=True)/h/1e6
+                if MF != 0:
+                    deltaMF = (MFp-MF)*np.sign(MF)
+                else:
+                    deltaMF = (MFp-MF)
+                plt.plot(MF, Pshift, '_', color=colors[F-3], alpha=0.33*(2+deltaMF), markersize=15, linewidth=10)
+                print("|F' = "+str(F+1)+", m_F' = "+str(MFp)+"> : %.5g MHz"%Pshift)
+                
+    plt.xlabel("$M_F$")  
+    plt.ylabel("AC Stark Shift (MHz)")
+    lines = plt.gca().lines
+    plt.legend(lines[18:24], ['F='+str(f)+r', $\Delta M_F=$'+str(-dmf) for f in range(3,5) for dmf in range(-1,2)])
+    plt.show()
+
+
 def compareKien():
     """compare Kien 2013 Fig 4,5"""
     bprop =[880e-9,20e-3,1e-6]
@@ -1023,7 +1061,7 @@ if __name__ == "__main__":
     #             power = 5e-3, # power of Cs tweezer beam in W
     #             Rbpower = 1e-3, # power of Rb tweezer beam in W 
     #             beamwaist = 1e-6)
-    check880Trap(wavels=np.linspace(795, 930, 400)*1e-9, species='Rb')
+    # check880Trap(wavels=np.linspace(795, 930, 400)*1e-9, species='Rb')
 
     # getMFStarkShifts()
     # plotStarkShifts(wlrange=[800,1100])

@@ -13,6 +13,7 @@ change in the diffraction limit with wavelength).
 """
 import numpy as np
 import matplotlib.pyplot as plt
+plt.rcParams.update({'font.size': 12}) # increase font size (default 10)
 from matplotlib.ticker import AutoLocator
 from scipy.optimize import curve_fit
 import os
