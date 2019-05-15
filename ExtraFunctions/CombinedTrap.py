@@ -150,16 +150,18 @@ def plotc23(fCs=factorCs, fRb=factorRb, p=power, ls='ko', label='', newfig=True)
 def plotcvary():
     """Vary the factors in the stability conditions to see how the plot of 
     max Rb tweezer wavelength against Cs tweezer wavelength varies"""
-    csfactors = [2,1.5,2,1.5]
-    rbfactors = [2,2,1.5,1.5]
-    labels = ['$f_{Cs}=%s, f_{Rb}=%s$'%(csfactors[i],rbfactors[i]) for i in range(len(csfactors))]
+    # csfactors = [2,1.5,2,1.5]
+    # rbfactors = [2,2,1.5,1.5]
+    # labels = ['$f_{Cs}=%s, f_{Rb}=%s$'%(csfactors[i],rbfactors[i]) for i in range(len(csfactors))]
+    factors = [5, 4, 3, 2]
+    labels = ['$f_{Cs} \cdot f_{Rb}=%s$'%f for f in factors]
     linestyles = ['ko', 'r^', 'gP', 'mX']
     plt.figure()
     plt.title('Vary the required ratio between trap depths')
     plt.xlabel('Cs tweezer wavelength (nm)')
     plt.ylabel('Maximum Rb tweezer wavelength (nm)')
     for i in range(len(labels)):
-        plotc23(fCs=csfactors[i], fRb=rbfactors[i], ls=linestyles[i], 
+        plotc23(fCs=factors[i]**0.5, fRb=factors[i]**0.5, ls=linestyles[i], 
                     label=labels[i], newfig=False)
     plt.legend()
                 
@@ -396,9 +398,12 @@ if __name__ == "__main__":
             checkfit() # Check the fit of the quadratic to the combined potential
         if any([argv == '6' for argv in sys.argv]):
             axialfit() # fit to the potential in the  axial direction 
+        if any([argv == '7' for argv in sys.argv]):
+            plotcvary() # Rbwl vs Cswl for different threshold conditions stringency
         if any([argv == 'all' for argv in sys.argv]):
             # plotc12()
             # plotc23()
+            plotcvary()
             checkfit()
             axialfit()
             plotc123()
