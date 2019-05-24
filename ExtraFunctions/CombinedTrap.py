@@ -13,7 +13,7 @@ change in the diffraction limit with wavelength).
 """
 import numpy as np
 import matplotlib.pyplot as plt
-plt.rcParams.update({'font.size': 12}) # increase font size (default 10)
+plt.rcParams.update({'font.size': 13}) # increase font size (default 10)
 from matplotlib.ticker import AutoLocator
 from scipy.optimize import curve_fit
 import os
@@ -34,7 +34,7 @@ Rbwaist = 1.2e-6    # beam waist fir Rb in m
 minU0 = -0.6e-3*kB  # min acceptable combined trap depth for Cs
 factorRb = 2        # how much deeper the Rb must be in its own trap
 factorCs = 2        # how much deeper the Cs must be in its own trap
-wavels = np.linspace(805, 825, 200) * 1e-9 # wavelengths to consider for Rb trap, in m
+wavels = np.linspace(800, 840, 1000) * 1e-9 # wavelengths to consider for Rb trap, in m
 
     
 # For the 1064nm trap: at Cs wavelength with Cs power and Cs beam waist
@@ -127,10 +127,11 @@ def plotc12():
         color='tab:orange', bbox=dict(facecolor='white', edgecolor=None))
     plt.legend()
 
+
 def plotc23(fCs=factorCs, fRb=factorRb, p=power, ls='ko', label='', newfig=True):
     """plot the stability conditions as a function of wavelength for
     conditions 2 and 3"""
-    Cswavels = np.linspace(930, 1070, 50)*1e-9 # Cs wavelengths in m
+    Cswavels = np.linspace(910, 1070, 30)*1e-9 # Cs wavelengths in m
     crosswls = np.zeros(len(Cswavels))
     for i in range(len(Cswavels)):
         r2 = P2Rb(Cswavels[i], wavels, Cspower=p, fRb=fRb) # condition 2
@@ -138,38 +139,46 @@ def plotc23(fCs=factorCs, fRb=factorRb, p=power, ls='ko', label='', newfig=True)
         d2 = abs(r3 - r2)
         crosswls[i] = wavels[np.argmin(d2)] # crossover wavelength in m
     # since search for crossover wavelength is discretised, only take unique values
+    # note that this will look disjointed unless crosswls has very small divisions
     crosswls, idx, occ = np.unique(crosswls, return_index=True, return_counts=True)
     Cswavels = Cswavels[idx + occ//2] # take the middle value when there are multiple occurences
     # plot the results
     if newfig:
         plt.figure()
-        plt.title('Threshold conditions on Rb tweezer wavelength')
+        # plt.title('Threshold conditions on Rb tweezer wavelength')
         plt.xlabel('Cs tweezer wavelength (nm)')
         plt.ylabel('Maximum Rb tweezer wavelength (nm)')
+        plt.xlim((min(Cswavels)*1e9, max(Cswavels)*1e9))
     plt.plot(Cswavels*1e9, crosswls*1e9, ls, label=label)
-    
+    return Cswavels, crosswls
+
+
 def plotcvary():
     """Vary the factors in the stability conditions to see how the plot of 
     max Rb tweezer wavelength against Cs tweezer wavelength varies"""
     # csfactors = [2,1.5,2,1.5]
     # rbfactors = [2,2,1.5,1.5]
     # labels = ['$f_{Cs}=%s, f_{Rb}=%s$'%(csfactors[i],rbfactors[i]) for i in range(len(csfactors))]
-    factors = [5, 4, 3, 2]
-    labels = ['$f_{Cs} \cdot f_{Rb}=%s$'%f for f in factors]
-    linestyles = ['ko', 'r^', 'gP', 'mX']
+    factors = np.array([5, 4, 3, 2])
+    # labels = ['$f_{Cs} \cdot f_{Rb}=%s$'%f for f in factors]
+    gCs = (factors**0.5 - 1)/factors**0.5
+    gRb = (factors**0.5 + 1)/factors**0.5
+    labels = ['$g_{Cs} =%.2g$'%g for g in gCs]
+    linestyles = ['r', 'k', 'g', 'm']
     plt.figure()
-    plt.title('Vary the required ratio between trap depths')
-    plt.xlabel('Cs tweezer wavelength (nm)')
-    plt.ylabel('Maximum Rb tweezer wavelength (nm)')
+    # plt.title('Vary the required ratio between trap depths')
+    plt.xlabel('Cs Tweezer Wavelength (nm)')
+    plt.ylabel('Maximum Rb Tweezer Wavelength (nm)')
+    results = []
     for i in range(len(labels)):
-        plotc23(fCs=factors[i]**0.5, fRb=factors[i]**0.5, ls=linestyles[i], 
-                    label=labels[i], newfig=False)
+        results.append(plotc23(fCs=factors[i]**0.5, fRb=factors[i]**0.5, ls=linestyles[i], 
+                    label=labels[i], newfig=False))
     plt.legend()
-                
+    return results
+
 
 
 # get the stability conditions as a function of wavelength
-wavels = np.linspace(795, 845, 200) * 1e-9 # wavelengths to consider in m
 PRbmin = getPRbmin(Cswl, wavels, Cspower=Cspowermin) # in W
 PRbmax = getPRbmax(Cswl, wavels, Cspower=Cspowermin) # in W
 diff = abs(PRbmin - PRbmax)
@@ -308,8 +317,7 @@ def plotmerge(n=3):
     xs = np.linspace(-max(sep)*0.5, max(sep)*1.5, 200)    # positions along the beam axis
 
     for atoms in [[Rb1064, Rb880, wrRb], [Cs1064, Cs880, wrCs]]:
-        plt.figure(figsize=(6,7.5))
-        plt.subplots_adjust(hspace=0.02)
+        plt.figure(figsize=(7,7.5))
         
         for i in range(n):
             ax = plt.subplot2grid((n,1), (i,0))
@@ -326,7 +334,6 @@ def plotmerge(n=3):
             plt.plot(xs*1e6, U, 'k')
             plt.plot(xs*1e6, U1064, color='tab:orange', alpha=0.6)
             plt.plot(xs*1e6, U880, color='tab:blue', alpha=0.6)
-            allU = np.concatenate((U, U1064, U880))
             plt.plot([0]*2, [minU0,maxU0], color='tab:orange', linewidth=10, label='%.0f'%(Cswl*1e9), alpha=0.4)
             plt.plot([sep[n-i-1]*1e6]*2, [minU0,maxU0], color='tab:blue', linewidth=10, label='%.0f'%(Rbwl*1e9), alpha=0.4)
             ax.set_xticks([])
@@ -337,12 +344,12 @@ def plotmerge(n=3):
 
             if i == 0:
                 # if atoms[0].X == 'Rb':
-                #     ax.set_title('a)', pad=25)
+                #     ax.set_title('a)', pad=30)
                 # elif atoms[0].X == 'Cs':
-                #     ax.set_title('b)', pad=25)
+                #     ax.set_title('b)', pad=30)
                 ax.set_title("Optical potential experienced by "+atoms[0].X
         +"\n%.0f beam power: %.3g mW   %.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, Rbpower*1e3),
-                    pad = 25)
+                    pad = 30)
                 plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
                 ax.text(xs[0]*1e6, 0, '$\omega = %.0f$ kHz'%(trap_freq(atoms[0])/afu), 
                                                         bbox=dict(facecolor='white', edgecolor=None))
@@ -355,6 +362,8 @@ def plotmerge(n=3):
         plt.ylabel('Trap Depth (mK)')
         ax.text(xs[0]*1e6, 0, '$\omega = %.0f$ kHz'%atoms[2], bbox=dict(facecolor='white', edgecolor=None))
         ax.yaxis.set_major_locator(AutoLocator())
+        plt.tight_layout()
+        plt.subplots_adjust(hspace=0.02)
     
 def plotcross12():
     """Use conditions 1 and 2 to find the maximum Rb tweezer wavelength as a 

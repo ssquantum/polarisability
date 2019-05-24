@@ -94,6 +94,9 @@ over the possible mj values.
 
 26.04.19
 Add in a function to calculate the scattering rate at a given wavelength
+
+20.05.19
+Function to get Stark shift of MF states for Rb or Cs on cooling/repump transition
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -163,7 +166,7 @@ def wigner6j(j1, j2, j3, J1, J2, J3):
             tripls *= np.sqrt(tric(*v))
     
     tsum = 0
-    for t in range(int(round(j1+j2++j3+J1+J2+J3+1))):
+    for t in range(int(round(j1+j2+j3+J1+J2+J3+1))):
         try:
             tsum += (-1)**t * factorial(t+1) /float(factorial(t-j1-j2-j3)
             )/float(factorial(t-j1-J2-J3)) /float(factorial(t-J1-j2-J3)
@@ -391,8 +394,7 @@ class dipole:
                         (2*self.J + 1) / (2*self.J + 3)) * (-1)**(self.J + 
                         self.states[i][2]) * wigner6j(self.J, 1, self.states[i][2], 
                         1, self.J, 2) * self.D0s[i]**2 * (1/Ep + 1/Em)
-                    
-      
+ 
             aSvals[ii] = aS.real  # scalar polarisability
             aVvals[ii] = aV.real  # vector polarisability
             aTvals[ii] = aT.real  # tensor polarisability
@@ -830,75 +832,89 @@ Rubidium: %.0f kHz \nCaesium: %.0f kHz"""%(Rbwl*1e9, Cswl*1e9, U0/kB*1e3, wrRb, 
     plt.show()
             
             
-def getMFStarkShifts():
-    """Return the Stark shifts of the MF states for Cs cooling/repump transitions"""
+def getMFStarkShifts(wavelength = 1064e-9, # laser wavelength in m
+                    power = 0.00906143,    # laser power in W
+                    beamwaist = 1e-6,      # beam waist in m
+                    ATOM = Cs):
+    """Return the Stark shifts of the MF states for cooling/repump transitions"""
+    bprop = [wavelength, power, beamwaist] # collect beam properties
+    if ATOM == Cs: # assign the relevant hyperfine transitions
+        Fs = [3, 4]
+    elif ATOM == Rb:
+        Fs = [1,2]
     
-    print("stark shift of Cs 6S1/2 -> 6P3/2 for different MF states at 1064nm for beam power 6 mW, beam waist 1 micron, giving trap depth 1 mK")
-    bprop = [1064e-9, 6e-3, 1e-6]      # wavelength, beam power, beam waist
+    print("Stark shift of "+ATOM.X+" S1/2 F = %s, %s -> P3/2 F' = %s, %s for different MF states."%(Fs[0],Fs[0]+1,Fs[1],Fs[1]+1))
     
     plt.figure()
     colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-    for F in [3, 4]:
+    for F in Fs:
         for MF in range(-F, F+1):
             print(" ----- |F = "+str(F)+", m_F = "+str(MF)+">")
             for MFp in range(MF-1, MF+2):
-                S = dipole(Cs.m, (0,1/2.,F,MF), bprop,
-                    Cs.D0S, Cs.w0S, Cs.lwS, Cs.nljS,
-                    nuclear_spin = Cs.I,
-                    symbol=Cs.X)
-                P = dipole(Cs.m, (1,3/2.,F+1,MFp), bprop,
-                    Cs.D0P3, Cs.w0P3, Cs.lwP3, Cs.nljP3,
-                    nuclear_spin = Cs.I,
-                    symbol=Cs.X)
+                S = dipole(ATOM.m, (0,1/2.,F,MF), bprop,
+                    ATOM.D0S, ATOM.w0S, ATOM.lwS, ATOM.nljS,
+                    nuclear_spin = ATOM.I,
+                    symbol=ATOM.X)
+                P = dipole(ATOM.m, (1,3/2.,F+1,MFp), bprop,
+                    ATOM.D0P3, ATOM.w0P3, ATOM.lwP3, ATOM.nljP3,
+                    nuclear_spin = ATOM.I,
+                    symbol=ATOM.X)
                 shift = (S.acStarkShift(0,0,0, bprop[0], HF=True) - P.acStarkShift(0,0,0, bprop[0], HF=True))/h/1e6
                 if MF != 0:
                     deltaMF = (MFp-MF)*np.sign(MF)
                 else:
                     deltaMF = (MFp-MF)
-                plt.plot(MF, shift, '_', color=colors[F-3], alpha=0.33*(2+deltaMF), markersize=15, linewidth=10)
+                plt.plot(MF, shift, '_', color=colors[F-1], alpha=0.33*(2+deltaMF), markersize=15, linewidth=10)
                 print("|F' = "+str(F+1)+", m_F' = "+str(MFp)+"> : %.5g MHz"%shift)
                 
     plt.xlabel("$M_F$")  
     plt.ylabel("AC Stark Shift (MHz)")
     lines = plt.gca().lines
-    plt.legend(lines[18:24], ['F='+str(f)+r', $\Delta M_F=$'+str(-dmf) for f in range(3,5) for dmf in range(-1,2)])
+    plt.legend(lines[18:24], ['F='+str(f)+r', $\Delta M_F=$'+str(-dmf) 
+                for f in range(min(Fs),max(Fs)+1) for dmf in range(-1,2)])
     plt.show()
 
 ''' rvb 15.05.2019: I've just added this function so I can work out lightshifts for the LGM -
-    haven't changed anything else! '''
-def vmfSS():
+    haven't changed anything else! 
+    Interested in the Cs (Rb) shifts of the F' = 4 (2) mF states relative to each other.
+    
+    '''
+def vmfSS(species = 'Rb'):
     """Return the Stark shifts of the MF states for Cs cooling/repump transitions"""
     
-    print("stark shift of Cs 6S1/2 -> 6P3/2 for different MF states at 1064nm for beam power 6 mW, beam waist 1 micron, giving trap depth 1 mK")
-    bprop = [1064e-9, 6e-3, 1e-6]      # wavelength, beam power, beam waist
-    
     plt.figure()
-    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-    for F in [3, 4]:
-        for MF in range(-F, F+1):
-            print(" ----- |F = "+str(F)+", m_F = "+str(MF)+">")
-            for MFp in range(MF-1, MF+2):
-                S = dipole(Cs.m, (0,1/2.,F,MF), bprop,
-                    Cs.D0S, Cs.w0S, Cs.lwS, Cs.nljS,
-                    nuclear_spin = Cs.I,
-                    symbol=Cs.X)
-                P = dipole(Cs.m, (1,3/2.,F+1,MFp), bprop,
-                    Cs.D0P3, Cs.w0P3, Cs.lwP3, Cs.nljP3,
-                    nuclear_spin = Cs.I,
-                    symbol=Cs.X)
-                Sshift = S.acStarkShift(0,0,0, bprop[0], HF=True)/h/1e6
-                Pshift = P.acStarkShift(0,0,0, bprop[0], HF=True)/h/1e6
-                if MF != 0:
-                    deltaMF = (MFp-MF)*np.sign(MF)
-                else:
-                    deltaMF = (MFp-MF)
-                plt.plot(MF, Pshift, '_', color=colors[F-3], alpha=0.33*(2+deltaMF), markersize=15, linewidth=10)
-                print("|F' = "+str(F+1)+", m_F' = "+str(MFp)+"> : %.5g MHz"%Pshift)
-                
+    
+    if species == 'Cs':
+        F = 5
+        bprop = [1064e-9, 6e-3, 1e-6]      # wavelength, beam power, beam waist
+        for MFp in range(-F, F+1, 1):
+            P = dipole(Cs.m, (1,3/2.,F,MFp), bprop,
+                       Cs.D0P3, Cs.w0P3, Cs.lwP3, Cs.nljP3,
+                       nuclear_spin = Cs.I,
+                       symbol=Cs.X)
+            Pshift = P.acStarkShift(0,0,0, bprop[0], HF=True)/h/1e6    # interested in how the EStates shift relative to each other
+            plt.plot(MFp, Pshift, '_', markersize=15, linewidth=10, color = '#7E317B')
+            print("|F' = "+str(F)+", m_F' = "+str(MFp)+"> : %.5g MHz"%Pshift)
+        
+    elif species == 'Rb':
+        F = 3
+        bprop = [810e-9, 2.7e-3, 1.5e-6]      # wavelength, beam power, beam waist
+        for MFp in range(-F, F+1, 1):
+            P = dipole(Rb.m, (1,3/2.,F,MFp), bprop,
+                       Rb.D0P3, Rb.w0P3, Rb.lwP3, Rb.nljP3,
+                       nuclear_spin = Rb.I,
+                       symbol=Rb.X)
+            Pshift = P.acStarkShift(0,0,0, bprop[0], HF=True)/h/1e6    # interested in how the EStates shift relative to each other
+            s, v, t = P.polarisability(bprop[0], mj=3/2, HF=False, split=True)
+            print('split ',s/au, t/au)
+            s, v, t = P.polarisability(bprop[0], mj=3/2, HF=True, split=True)
+            print('avrge ',s/au, t/au)
+            plt.plot(MFp, Pshift, '_', markersize=15, linewidth=10, color = '#7E317B')
+            print("|F' = "+str(F)+", m_F' = "+str(MFp)+"> : %.5g MHz"%Pshift)
+    
+    plt.title('Stark Shifts of ' + species + " |F' = " + str(F) + ', $M_F$> states' )            
     plt.xlabel("$M_F$")  
     plt.ylabel("AC Stark Shift (MHz)")
-    lines = plt.gca().lines
-    plt.legend(lines[18:24], ['F='+str(f)+r', $\Delta M_F=$'+str(-dmf) for f in range(3,5) for dmf in range(-1,2)])
     plt.show()
 
 
@@ -1055,6 +1071,8 @@ if __name__ == "__main__":
     if np.size(sys.argv) > 1 and sys.argv[1] == 'rungui':
         runGUI()
         sys.exit() # don't run any of the other code below
+        
+    vmfSS()
 
     # combinedTrap(Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
     #             Rbwl = 810e-9, # wavelength of the Rb tweezer trap in m
