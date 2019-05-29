@@ -26,7 +26,7 @@ from AtomFieldInt_V3 import (dipole, Rb, Cs, c, eps0, h, hbar, a0, e, me,
 afu = 2 * np.pi * 1e3 # convert from angular frequency to kHz
 
 Cswl = 1064e-9      # wavelength of the Cs tweezer trap in m
-Rbwl = 807e-9       # wavelength of the Rb tweezer trap in m
+Rbwl = 810e-9       # wavelength of the Rb tweezer trap in m
 power = 14e-3       # power of Cs tweezer beam in W
 Cswaist = 1.2e-6    # beam waist for Cs in m
 Rbpower = power*0.2 # power of Rb tweezer beam in W 
@@ -34,7 +34,7 @@ Rbwaist = 1.2e-6    # beam waist fir Rb in m
 minU0 = -0.6e-3*kB  # min acceptable combined trap depth for Cs
 factorRb = 2        # how much deeper the Rb must be in its own trap
 factorCs = 2        # how much deeper the Cs must be in its own trap
-wavels = np.linspace(800, 840, 1000) * 1e-9 # wavelengths to consider for Rb trap, in m
+wavels = np.linspace(800, 840, 400) * 1e-9 # wavelengths to consider for Rb trap, in m
 
     
 # For the 1064nm trap: at Cs wavelength with Cs power and Cs beam waist
@@ -115,9 +115,11 @@ def plotc12():
         label='Upper Limit from $U_{Cs}$ < -0.6 mK')
     plt.plot(wavels*1e9, ratio2, color='tab:orange',
         label='Lower Limit from $U_{Rb}(\lambda) > %s U_{Rb}$(%.0f nm)'%(factorRb, Cswl*1e9)) 
-    plt.fill_between([crossover*1e9, wavels[-1]*1e9], min(both), max(both), color='tab:red', alpha=0.2)
-    plt.fill_between([wavels[0]*1e9, crossover*1e9], min(both), max(both), color='tab:green', alpha=0.2)
-    plt.xlabel('Wavelength (nm)')
+    plt.fill_between(wavels*1e9, 0, ratio2, color='tab:red', alpha=0.2) # bottom region red
+    plt.fill_between(wavels*1e9, ratio1, max(both), color='tab:red', alpha=0.2) # top region red
+    plt.fill_between(wavels[:np.argmin(diff1)]*1e9, ratio2[:np.argmin(diff1)], # between curves green
+                            ratio1[:np.argmin(diff1)], color='tab:green', alpha=0.2)
+    plt.xlabel('Rb Tweezer Wavelength (nm)')
     plt.ylabel('Power Ratio $P_{Rb}/P_{Cs}$')
     plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
     plt.ylim(min(ratio2), max(ratio1))
@@ -182,7 +184,8 @@ def plotcvary():
 PRbmin = getPRbmin(Cswl, wavels, Cspower=Cspowermin) # in W
 PRbmax = getPRbmax(Cswl, wavels, Cspower=Cspowermin) # in W
 diff = abs(PRbmin - PRbmax)
-crossover = wavels[np.argmin(diff)] # wavelength where PRbmin crosses PRbmax
+idiff = np.argmin(diff)   # index where PRbmin crosses PRbmax
+crossover = wavels[idiff] # wavelength where PRbmin crosses PRbmax
 print("Combined stability conditions crossover at %.1f nm\n"%(crossover*1e9))
 both = np.concatenate((PRbmin, PRbmax))*1e3 # in mW
 
@@ -192,8 +195,13 @@ def plotc123(Cspower=Cspowermin):
     plt.title('Threshold Conditions on $P_{Rb}$ when $P_{Cs}$ = %.3g mW'%(Cspower*1e3))
     plt.plot(wavels*1e9, PRbmax*1e3, color='tab:blue', label='Maximum power')
     plt.plot(wavels*1e9, PRbmin*1e3, color='tab:orange', label='Minimum power') 
-    plt.fill_between([crossover*1e9, wavels[-1]*1e9], min(both), max(both), color='tab:red', alpha=0.2)
-    plt.fill_between([wavels[0]*1e9, crossover*1e9], min(both), max(both), color='tab:green', alpha=0.2)
+    plt.fill_between(wavels*1e9, 0, PRbmin*1e3, color='tab:red', alpha=0.2) # bottom region red
+    plt.fill_between(wavels[:idiff]*1e9, PRbmax[:idiff]*1e3, 
+                    max(both), color='tab:red', alpha=0.2) # top left region red
+    plt.fill_between(wavels[idiff:]*1e9, PRbmin[idiff:]*1e3, 
+                    max(both), color='tab:red', alpha=0.2) # top right region red
+    plt.fill_between(wavels[:idiff]*1e9, PRbmin[:idiff]*1e3, # between curves green
+                            PRbmax[:idiff]*1e3, color='tab:green', alpha=0.2)
     plt.xlabel('Wavelength (nm)')
     plt.ylabel('Rb tweezer beam power $P_{Rb}$ (mW)')
     plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
@@ -394,21 +402,21 @@ if __name__ == "__main__":
     # only plot if the user passes a second argument, this acts like verbosity level
     # e.g. python CombinedTrap.py 1
     if np.size(sys.argv) > 1:
-        if any([argv == '0' for argv in sys.argv]):
+        if any([argv == '12' for argv in sys.argv]):
             plotc12() # threshold conditions 1 and 2
-        if any([argv == '1' for argv in sys.argv]):
+        if any([argv == '23' for argv in sys.argv]):
             plotc23() # Rbwl vs Cswl from threshold conditions 2 and 3
-        if any([argv == '2' for argv in sys.argv]):
+        if any([argv == '123' for argv in sys.argv]):
             plotc123() # PRb vs wavelength from all threshold conditions
-        if any([argv == '3' for argv in sys.argv]):
+        if any([argv == 'merge' for argv in sys.argv]):
             plotmerge() # merging tweezers
-        if any([argv == '4' for argv in sys.argv]):
+        if any([argv == 'cross12' for argv in sys.argv]):
             plotcross12() # Rbwl vs PCs from threshold conditions 2 and 3
-        if any([argv == '5' for argv in sys.argv]):
+        if any([argv == 'checkfit' for argv in sys.argv]):
             checkfit() # Check the fit of the quadratic to the combined potential
-        if any([argv == '6' for argv in sys.argv]):
+        if any([argv == 'axialfit' for argv in sys.argv]):
             axialfit() # fit to the potential in the  axial direction 
-        if any([argv == '7' for argv in sys.argv]):
+        if any([argv == 'vary' for argv in sys.argv]):
             plotcvary() # Rbwl vs Cswl for different threshold conditions stringency
         if any([argv == 'all' for argv in sys.argv]):
             # plotc12()

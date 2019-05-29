@@ -839,11 +839,11 @@ def getMFStarkShifts(wavelength = 1064e-9, # laser wavelength in m
     """Return the Stark shifts of the MF states for cooling/repump transitions"""
     bprop = [wavelength, power, beamwaist] # collect beam properties
     if ATOM == Cs: # assign the relevant hyperfine transitions
-        Fs = [3, 4]
+        Fs = [ 4]
     elif ATOM == Rb:
         Fs = [1,2]
     
-    print("Stark shift of "+ATOM.X+" S1/2 F = %s, %s -> P3/2 F' = %s, %s for different MF states."%(Fs[0],Fs[0]+1,Fs[1],Fs[1]+1))
+    # print("Stark shift of "+ATOM.X+" S1/2 F = %s, %s -> P3/2 F' = %s, %s for different MF states."%(Fs[0],Fs[0]+1,Fs[1],Fs[1]+1))
     
     plt.figure()
     colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -1072,7 +1072,7 @@ if __name__ == "__main__":
         runGUI()
         sys.exit() # don't run any of the other code below
         
-    vmfSS()
+    # vmfSS()
 
     # combinedTrap(Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
     #             Rbwl = 810e-9, # wavelength of the Rb tweezer trap in m
@@ -1081,7 +1081,7 @@ if __name__ == "__main__":
     #             beamwaist = 1e-6)
     # check880Trap(wavels=np.linspace(795, 930, 400)*1e-9, species='Rb')
 
-    # getMFStarkShifts()
+    getMFStarkShifts()
     # plotStarkShifts(wlrange=[800,1100])
 
     # for STATES in [[Rb5S, Rb5P],[Cs6S, Cs6P]]:
