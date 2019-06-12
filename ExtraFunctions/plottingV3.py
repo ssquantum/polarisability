@@ -360,43 +360,52 @@ Rubidium: %.0f kHz \nCaesium: %.0f kHz"""%(Rbwl*1e9, Cswl*1e9, U0/kB*1e3, wrRb, 
         ax.yaxis.set_major_locator(AutoLocator())
         
     plt.show()
-            
-            
-def getMFStarkShifts():
-    """Return the Stark shifts of the MF states for Cs cooling/repump transitions"""
+
+def getMFStarkShifts(wavelength = 1064e-9, # laser wavelength in m
+                    power = 0.00906143,    # laser power in W
+                    beamwaist = 1e-6,      # beam waist in m
+                    ATOM = Cs):
+    """Return the Stark shifts of the MF states for cooling/repump transitions"""
+    bprop = [wavelength, power, beamwaist] # collect beam properties
+    if ATOM == Cs: # assign the relevant hyperfine transitions
+        Fs = [3,4]
+        l1 = [18,24] # index of lines for making legend
+    elif ATOM == Rb:
+        Fs = [1,2]
+        l1 = [6,12] # index of lines for making legend
     
-    print("stark shift of Cs 6S1/2 -> 6P3/2 for different MF states at 1064nm for beam power 6 mW, beam waist 1 micron, giving trap depth 1 mK")
-    bprop = [1064e-9, 6.08150239e-3, 1e-6]      # wavelength, beam power, beam waist
+    # print("Stark shift of "+ATOM.X+" S1/2 F = %s, %s -> P3/2 F' = %s, %s for different MF states."%(Fs[0],Fs[0]+1,Fs[1],Fs[1]+1))
     
     plt.figure()
-    # colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-    colors = ['k', 'r']
-    for F in [3, 4]:
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    for F in Fs:
         for MF in range(-F, F+1):
             print(" ----- |F = "+str(F)+", m_F = "+str(MF)+">")
             for MFp in range(MF-1, MF+2):
-                S = dipole(Cs.m, (0,1/2.,F,MF), bprop,
-                    Cs.D0S, Cs.w0S, Cs.lwS, Cs.nljS,
-                    nuclear_spin = Cs.I,
-                    symbol=Cs.X)
-                P = dipole(Cs.m, (1,3/2.,F+1,MFp), bprop,
-                    Cs.D0P3, Cs.w0P3, Cs.lwP3, Cs.nljP3,
-                    nuclear_spin = Cs.I,
-                    symbol=Cs.X)
+                S = dipole(ATOM.m, (0,1/2.,F,MF), bprop,
+                    ATOM.D0S, ATOM.w0S, ATOM.lwS, ATOM.nljS,
+                    nuclear_spin = ATOM.I,
+                    symbol=ATOM.X)
+                P = dipole(ATOM.m, (1,3/2.,F+1,MFp), bprop,
+                    ATOM.D0P3, ATOM.w0P3, ATOM.lwP3, ATOM.nljP3,
+                    nuclear_spin = ATOM.I,
+                    symbol=ATOM.X)
                 shift = (S.acStarkShift(0,0,0, bprop[0], HF=True) - P.acStarkShift(0,0,0, bprop[0], HF=True))/h/1e6
                 if MF != 0:
                     deltaMF = (MFp-MF)*np.sign(MF)
                 else:
                     deltaMF = (MFp-MF)
-                plt.plot(MF, shift, '_', color=colors[F-3], alpha=0.33*(2+deltaMF), markersize=15, linewidth=10)
+                plt.plot(MF, shift, '_', color=colors[F-1], alpha=0.33*(2+deltaMF), markersize=15, linewidth=10)
                 print("|F' = "+str(F+1)+", m_F' = "+str(MFp)+"> : %.5g MHz"%shift)
                 
     plt.xlabel("$M_F$")  
     plt.ylabel("AC Stark Shift (MHz)")
     lines = plt.gca().lines
-    plt.legend(lines[18:24], ['F='+str(f)+', $\Delta M_F=$'+str(-dmf) for f in range(3,5) for dmf in range(-1,2)])
-    plt.show()        
+    plt.legend(lines[l1[0]:l1[1]], ['F='+str(f)+r', $\Delta M_F=$'+str(-dmf) 
+                for f in range(min(Fs),max(Fs)+1) for dmf in range(-1,2)])
+    plt.show()
 
+    
 def plotPolarisability():
     """Plot the polarisability of Rb 5S and Cs 6S states highlighting our laser wavelengths"""
     bprop = [1064e-9, 6e-3, 1e-6]      # wavelength, beam power, beam waist

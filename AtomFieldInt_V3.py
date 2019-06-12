@@ -839,9 +839,11 @@ def getMFStarkShifts(wavelength = 1064e-9, # laser wavelength in m
     """Return the Stark shifts of the MF states for cooling/repump transitions"""
     bprop = [wavelength, power, beamwaist] # collect beam properties
     if ATOM == Cs: # assign the relevant hyperfine transitions
-        Fs = [ 4]
+        Fs = [3,4]
+        l1 = [18,24] # index of lines for making legend
     elif ATOM == Rb:
         Fs = [1,2]
+        l1 = [6,12] # index of lines for making legend
     
     # print("Stark shift of "+ATOM.X+" S1/2 F = %s, %s -> P3/2 F' = %s, %s for different MF states."%(Fs[0],Fs[0]+1,Fs[1],Fs[1]+1))
     
@@ -870,7 +872,7 @@ def getMFStarkShifts(wavelength = 1064e-9, # laser wavelength in m
     plt.xlabel("$M_F$")  
     plt.ylabel("AC Stark Shift (MHz)")
     lines = plt.gca().lines
-    plt.legend(lines[18:24], ['F='+str(f)+r', $\Delta M_F=$'+str(-dmf) 
+    plt.legend(lines[l1[0]:l1[1]], ['F='+str(f)+r', $\Delta M_F=$'+str(-dmf) 
                 for f in range(min(Fs),max(Fs)+1) for dmf in range(-1,2)])
     plt.show()
 

@@ -202,7 +202,7 @@ def plotc123(Cspower=Cspowermin):
                     max(both), color='tab:red', alpha=0.2) # top right region red
     plt.fill_between(wavels[:idiff]*1e9, PRbmin[:idiff]*1e3, # between curves green
                             PRbmax[:idiff]*1e3, color='tab:green', alpha=0.2)
-    plt.xlabel('Wavelength (nm)')
+    plt.xlabel('Rb Tweezer Wavelength (nm)')
     plt.ylabel('Rb tweezer beam power $P_{Rb}$ (mW)')
     plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
     plt.ylim(min(PRbmin), max(PRbmax)*1.5e3)
