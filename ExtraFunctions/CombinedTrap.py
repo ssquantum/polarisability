@@ -20,14 +20,18 @@ import os
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 import sys
 sys.path.append('..')
+# use JQC official colour scheme
+sys.path.append(r'Z:\Tweezer\People\Vincent\python snippets\plotting_tools')
+sys.path.append(r'Y:\Tweezer\People\Vincent\python snippets\plotting_tools')
+import default_colours
 from AtomFieldInt_V3 import (dipole, Rb, Cs, c, eps0, h, hbar, a0, e, me, 
     kB, amu, Eh, au)
 
 afu = 2 * np.pi * 1e3 # convert from angular frequency to kHz
 
 Cswl = 1064e-9      # wavelength of the Cs tweezer trap in m
-Rbwl = 810e-9       # wavelength of the Rb tweezer trap in m
-power = 14e-3       # power of Cs tweezer beam in W
+Rbwl = 807e-9       # wavelength of the Rb tweezer trap in m
+power = 11e-3       # power of Cs tweezer beam in W
 Cswaist = 1.2e-6    # beam waist for Cs in m
 Rbpower = power*0.2 # power of Rb tweezer beam in W 
 Rbwaist = 1.2e-6    # beam waist fir Rb in m
@@ -111,9 +115,9 @@ def plotc12():
     conditions 1 and 2"""
     plt.figure()
     plt.title('Threshold Conditions on Power Ratio $P_{Rb}/P_{Cs}$')
-    plt.plot(wavels*1e9, ratio1, color='tab:blue', 
+    plt.plot(wavels*1e9, ratio1, color=default_colours.DUsea_blue, 
         label='Upper Limit from $U_{Cs}$ < -0.6 mK')
-    plt.plot(wavels*1e9, ratio2, color='tab:orange',
+    plt.plot(wavels*1e9, ratio2, color=default_colours.DUcherry_red,
         label='Lower Limit from $U_{Rb}(\lambda) > %s U_{Rb}$(%.0f nm)'%(factorRb, Cswl*1e9)) 
     plt.fill_between(wavels*1e9, 0, ratio2, color='tab:red', alpha=0.2) # bottom region red
     plt.fill_between(wavels*1e9, ratio1, max(both), color='tab:red', alpha=0.2) # top region red
@@ -124,9 +128,9 @@ def plotc12():
     plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
     plt.ylim(min(ratio2), max(ratio1))
     plt.text(812, max(ratio2)*0.25, 'Upper limit at %.0f nm: %.3g'%(Rbwl*1e9, P1Rb(Cswl,Rbwl)/power),
-        color='tab:blue', bbox=dict(facecolor='white', edgecolor=None))
+        color=default_colours.DUsea_blue, bbox=dict(facecolor='white', edgecolor=None))
     plt.text(812, max(ratio2)*0.21, 'Lower limit at %.0f nm: %.3g'%(Rbwl*1e9, P2Rb(Cswl,Rbwl)/power),
-        color='tab:orange', bbox=dict(facecolor='white', edgecolor=None))
+        color=default_colours.DUcherry_red, bbox=dict(facecolor='white', edgecolor=None))
     plt.legend()
 
 
@@ -193,8 +197,8 @@ def plotc123(Cspower=Cspowermin):
     """plot the combined stability conditions as a function of wavelength"""
     plt.figure()
     plt.title('Threshold Conditions on $P_{Rb}$ when $P_{Cs}$ = %.3g mW'%(Cspower*1e3))
-    plt.plot(wavels*1e9, PRbmax*1e3, color='tab:blue', label='Maximum power')
-    plt.plot(wavels*1e9, PRbmin*1e3, color='tab:orange', label='Minimum power') 
+    plt.plot(wavels*1e9, PRbmax*1e3, color=default_colours.DUsea_blue, label='Maximum power')
+    plt.plot(wavels*1e9, PRbmin*1e3, color=default_colours.DUcherry_red, label='Minimum power') 
     plt.fill_between(wavels*1e9, 0, PRbmin*1e3, color='tab:red', alpha=0.2) # bottom region red
     plt.fill_between(wavels[:idiff]*1e9, PRbmax[:idiff]*1e3, 
                     max(both), color='tab:red', alpha=0.2) # top left region red
@@ -208,10 +212,10 @@ def plotc123(Cspower=Cspowermin):
     plt.ylim(min(PRbmin), max(PRbmax)*1.5e3)
     plt.text(crossover*1e9, max(PRbmax)*0.24*1e3, 'Upper limit at %.0f nm: %.3g mW'%(Rbwl*1e9, 
         getPRbmax(Cswl, Rbwl, Cspower=Cspower)*1e3),
-        color='tab:blue', bbox=dict(facecolor='white', edgecolor=None))
+        color=default_colours.DUsea_blue, bbox=dict(facecolor='white', edgecolor=None))
     plt.text(crossover*1e9, max(PRbmax)*0.1*1e3, 'Lower limit at %.0f nm: %.3g mW'%(Rbwl*1e9, 
         getPRbmin(Cswl, Rbwl, Cspower=Cspower)*1e3),
-        color='tab:orange', bbox=dict(facecolor='white', edgecolor=None))
+        color=default_colours.DUcherry_red, bbox=dict(facecolor='white', edgecolor=None))
     plt.legend()
 
 
@@ -258,10 +262,10 @@ def checkfit():
     UCRb  = Rb1064.acStarkShift(xtra,0,0) + Rb880.acStarkShift(xtra,0,0)  # Rb potential in combined trap
     UCCs  = Cs1064.acStarkShift(xtra,0,0) + Cs880.acStarkShift(xtra,0,0)  # Cs potential in combined trap
     plt.figure()
-    plt.plot(xtra*1e6, UCRb/kB*1e3, 'tab:blue', label='Rb $\omega_r = %.3g$ kHz'%wrRb)
-    plt.plot(xtra*1e6, quad(xtra, *Rbpopt)/kB*1e3, '--', color='tab:blue')
-    plt.plot(xtra*1e6, UCCs/kB*1e3, 'tab:orange', label='Cs $\omega_r = %.3g$ kHz'%wrCs)
-    plt.plot(xtra*1e6, quad(xtra, *Cspopt)/kB*1e3, '--', color='tab:orange')
+    plt.plot(xtra*1e6, UCRb/kB*1e3, default_colours.DUsea_blue, label='Rb $\omega_r/2\pi = %.3g$ kHz'%wrRb)
+    plt.plot(xtra*1e6, quad(xtra, *Rbpopt)/kB*1e3, '--', color=default_colours.DUsea_blue)
+    plt.plot(xtra*1e6, UCCs/kB*1e3, default_colours.DUcherry_red, label='Cs $\omega_r/2\pi = %.3g$ kHz'%wrCs)
+    plt.plot(xtra*1e6, quad(xtra, *Cspopt)/kB*1e3, '--', color=default_colours.DUcherry_red)
     plt.xlabel('Radial Position ($\mu m$)')
     plt.ylabel('Dipole Potential (mK)')
     both = np.concatenate((UCRb/kB*1e3, UCCs/kB*1e3))
@@ -282,10 +286,10 @@ def axialfit():
     UCRb  = Rb1064.acStarkShift(0,0,zxtra) + Rb880.acStarkShift(0,0,zxtra)  # Rb potential in combined trap
     UCCs  = Cs1064.acStarkShift(0,0,zxtra) + Cs880.acStarkShift(0,0,zxtra)  # Cs potential in combined trap
     plt.figure()
-    plt.plot(zxtra*1e6, UCRb/kB*1e3, 'tab:blue', label=r'Rb $\omega_z=%.3g$ kHz, $\eta=%.2g$'%(wzRb, getLD(Rb880, wzRb*afu)))
-    plt.plot(zxtra*1e6, quad(zxtra, *Rbpopt)/kB*1e3, '--', color='tab:blue')
-    plt.plot(zxtra*1e6, UCCs/kB*1e3, 'tab:orange', label=r'Cs $\omega_z = %.3g$ kHz, $\eta=%.2g$'%(wzCs, getLD(Cs1064, wzCs*afu)))
-    plt.plot(zxtra*1e6, quad(zxtra, *Cspopt)/kB*1e3, '--', color='tab:orange')
+    plt.plot(zxtra*1e6, UCRb/kB*1e3, default_colours.DUsea_blue, label=r'Rb $\omega_z/2\pi=%.3g$ kHz, $\eta=%.2g$'%(wzRb, getLD(Rb880, wzRb*afu)))
+    plt.plot(zxtra*1e6, quad(zxtra, *Rbpopt)/kB*1e3, '--', color=default_colours.DUsea_blue)
+    plt.plot(zxtra*1e6, UCCs/kB*1e3, default_colours.DUcherry_red, label=r'Cs $\omega_z/2\pi = %.3g$ kHz, $\eta=%.2g$'%(wzCs, getLD(Cs1064, wzCs*afu)))
+    plt.plot(zxtra*1e6, quad(zxtra, *Cspopt)/kB*1e3, '--', color=default_colours.DUcherry_red)
     plt.xlabel(r'Axial Position ($\mu m$)')
     plt.ylabel('Dipole Potential (mK)')
     both = np.concatenate((UCRb/kB*1e3, UCCs/kB*1e3))
@@ -325,7 +329,7 @@ def plotmerge(n=3):
     xs = np.linspace(-max(sep)*0.5, max(sep)*1.5, 200)    # positions along the beam axis
 
     for atoms in [[Rb1064, Rb880, wrRb], [Cs1064, Cs880, wrCs]]:
-        plt.figure(figsize=(7,7.5))
+        plt.figure(figsize=(6,7.5))
         
         for i in range(n):
             ax = plt.subplot2grid((n,1), (i,0))
@@ -340,10 +344,10 @@ def plotmerge(n=3):
             U1064 = atoms[0].acStarkShift(xs,0,0)/kB*1e3         # potential in the 1064 trap
             U880 = atoms[1].acStarkShift(xs-sep[n-i-1],0,0)/kB*1e3 # potential in the 880 trap
             plt.plot(xs*1e6, U, 'k')
-            plt.plot(xs*1e6, U1064, color='tab:orange', alpha=0.6)
-            plt.plot(xs*1e6, U880, color='tab:blue', alpha=0.6)
-            plt.plot([0]*2, [minU0,maxU0], color='tab:orange', linewidth=10, label='%.0f'%(Cswl*1e9), alpha=0.4)
-            plt.plot([sep[n-i-1]*1e6]*2, [minU0,maxU0], color='tab:blue', linewidth=10, label='%.0f'%(Rbwl*1e9), alpha=0.4)
+            plt.plot(xs*1e6, U1064, color=default_colours.DUcherry_red, alpha=0.6)
+            plt.plot(xs*1e6, U880, color=default_colours.DUsea_blue, alpha=0.6)
+            plt.plot([0]*2, [minU0,maxU0], color=default_colours.DUcherry_red, linewidth=10, label='%.0f'%(Cswl*1e9), alpha=0.4)
+            plt.plot([sep[n-i-1]*1e6]*2, [minU0,maxU0], color=default_colours.DUsea_blue, linewidth=10, label='%.0f'%(Rbwl*1e9), alpha=0.4)
             ax.set_xticks([])
             ax.set_ylim((minU0,maxU0))
             ax.set_xlim((xs[0]*1e6, xs[-1]*1e6))
@@ -351,24 +355,24 @@ def plotmerge(n=3):
             
 
             if i == 0:
-                # if atoms[0].X == 'Rb':
-                #     ax.set_title('a)', pad=30)
-                # elif atoms[0].X == 'Cs':
-                #     ax.set_title('b)', pad=30)
-                ax.set_title("Optical potential experienced by "+atoms[0].X
-        +"\n%.0f beam power: %.3g mW   %.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, Rbpower*1e3),
-                    pad = 30)
+                if atoms[0].X == 'Rb':
+                    ax.set_title('a)', pad=30)
+                elif atoms[0].X == 'Cs':
+                    ax.set_title('b)', pad=30)
+        #         ax.set_title("Optical potential experienced by "+atoms[0].X
+        # +"\n%.0f beam power: %.3g mW   %.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, Rbpower*1e3),
+        #             pad = 30)
                 plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
-                ax.text(xs[0]*1e6, 0, '$\omega = %.0f$ kHz'%(trap_freq(atoms[0])/afu), 
-                                                        bbox=dict(facecolor='white', edgecolor=None))
-                ax.text(sep[-1]*1e6,0,'$\omega = %.0f$ kHz'%(trap_freq(atoms[1])/afu), 
-                                                        bbox=dict(facecolor='white', edgecolor=None))
+                # ax.text(xs[0]*1e6, 0, '$\omega/2\pi = %.0f$ kHz'%(trap_freq(atoms[0])/afu), 
+                #                                         bbox=dict(facecolor='white', edgecolor=None))
+                # ax.text(sep[-1]*1e6,0,'$\omega/2\pi = %.0f$ kHz'%(trap_freq(atoms[1])/afu), 
+                #                                         bbox=dict(facecolor='white', edgecolor=None))
         
             
         plt.xlabel(r'Position ($\mu$m)')
         ax.set_xticks(sep*1e6)
         plt.ylabel('Trap Depth (mK)')
-        ax.text(xs[0]*1e6, 0, '$\omega = %.0f$ kHz'%atoms[2], bbox=dict(facecolor='white', edgecolor=None))
+        # ax.text(xs[0]*1e6, 0, '$\omega/2\pi = %.0f$ kHz'%atoms[2], bbox=dict(facecolor='white', edgecolor=None))
         ax.yaxis.set_major_locator(AutoLocator())
         plt.tight_layout()
         plt.subplots_adjust(hspace=0.02)
