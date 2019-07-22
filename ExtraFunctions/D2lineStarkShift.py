@@ -50,14 +50,14 @@ def getMFStarkShifts(wavelength = 1064e-9, # laser wavelength in m
                 print("|F' = "+str(F+1)+", m_F' = "+str(MFp)+"> : %.5g MHz"%shift)
                 
     plt.xlabel("$M_F$")  
-    plt.ylabel("AC Stark Shift (MHz)")
+    plt.ylabel("Differential AC Stark Shift (MHz)")
     lines = plt.gca().lines
     plt.legend(lines[l1[0]:l1[1]], ['F='+str(f)+r', $\Delta M_F=$'+str(-dmf) 
                 for f in range(min(Fs),max(Fs)+1) for dmf in range(-1,2)])
     plt.show()
 
 if __name__ == "__main__":
-    getMFStarkShifts(wavelength = 812e-9, # laser wavelength in m
-                    power = 2e-3,    # laser power in W
+    getMFStarkShifts(wavelength = 1064e-9, # laser wavelength in m
+                    power = 0.00875736,    # laser power in W
                     beamwaist = 1.2e-6,      # beam waist in m
-                    ATOM = Rb)
+                    ATOM = Cs)

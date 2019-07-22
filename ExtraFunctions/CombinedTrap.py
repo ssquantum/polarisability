@@ -376,7 +376,28 @@ def plotmerge(n=3):
         ax.yaxis.set_major_locator(AutoLocator())
         plt.tight_layout()
         plt.subplots_adjust(hspace=0.02)
-    
+
+def plotTweezers():
+    """make a figure showing the Rb and Cs tweezer potentials side-by-side"""
+    wid = max([Cswaist, Rbwaist])*1e6 # width of tweezer trap in microns
+    xs = np.linspace(-wid, wid*3, 200)    # positions along the beam axis in microns
+    URb = (Rb1064.acStarkShift(xs*1e-6,0,0) + Rb880.acStarkShift((xs-2*wid)*1e-6,0,0))/kB*1e3   # Rb potential in mK
+    UCs = (Cs1064.acStarkShift(xs*1e-6,0,0) + Cs880.acStarkShift((xs-2*wid)*1e-6,0,0))/kB*1e3   # Cs potential in mK
+    both = np.concatenate((URb, UCs))
+    plt.figure()
+    plt.plot(xs, UCs, color=default_colours.DUcherry_red) # Cs potential
+    plt.fill_between([-wid*0.5, wid*0.5], [max(both)*1.1], y2=min(both)*1.1,    # Cs tweezer
+                        color=default_colours.DUcherry_red, alpha=0.4)  
+    plt.plot(xs, URb, color=default_colours.DUsea_blue)   # Rb potential
+    plt.fill_between([wid*1.5, wid*2.5], [max(both)*1.1], y2=min(both*1.1),    # Rb tweezer
+                        color=default_colours.DUsea_blue, alpha=0.4)  
+    # plt.plot([0]*2, [min(both)*1.1, max(both)*1.1], color=default_colours.DUpalatinate, alpha=0.3, linewidth=200)
+    plt.ylabel('Trap Depth (mK)')
+    plt.ylim((min(both)*1.1, max(both)*1.1))
+    plt.xlabel(r'Position ($\mu$m)')
+    plt.xlim((min(xs), max(xs)))
+    plt.tight_layout()
+
 def plotcross12():
     """Use conditions 1 and 2 to find the maximum Rb tweezer wavelength as a 
     function of Cs beam power"""
@@ -422,6 +443,8 @@ if __name__ == "__main__":
             axialfit() # fit to the potential in the  axial direction 
         if any([argv == 'vary' for argv in sys.argv]):
             plotcvary() # Rbwl vs Cswl for different threshold conditions stringency
+        if any([argv == 'tweezer' for argv in sys.argv]):
+            plotTweezers() # figure showing the Rb and Cs potentials from tweezers
         if any([argv == 'all' for argv in sys.argv]):
             # plotc12()
             # plotc23()

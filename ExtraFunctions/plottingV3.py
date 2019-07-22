@@ -11,6 +11,7 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 import sys
 sys.path.append('..')
 sys.path.append(r'Y:\Tweezer\People\Vincent\python snippets\plotting_tools')
+sys.path.append(r'Z`:\Tweezer\People\Vincent\python snippets\plotting_tools')
 from AtomFieldInt_V3 import dipole, Rb, Cs, c, eps0, h, hbar, a0, e, me, kB, amu, Eh, au
 from default_colours import DUsea_blue, DUcherry_red
 from matplotlib.ticker import AutoLocator
@@ -458,6 +459,75 @@ def plotPolarisability():
     plt.legend()
     plt.tight_layout()
     plt.show()
+    
+def plotScatRate():
+    """Plot the polarisability of Rb 5S and Cs 6S states and the scattering
+    rates within a given wavelength range (given in metres)"""
+    bprop = [1064e-9, 6e-3, 1e-6]      # wavelength, beam power, beam waist
+    wl1 = np.linspace(795e-9, Cs.rwS[0], 200) # wavelength below Cs D1 line (m)
+    wl2 = np.linspace(Cs.rwS[0], 1100e-9, 200) # wavelength below Cs D1 line (m)
+    
+    # groundstate rubidium
+    Rb5S = dipole(Rb.m, (0,1/2.,1,1), bprop,
+                    Rb.D0S, Rb.w0S, Rb.lwS, Rb.nljS,
+                    nuclear_spin = Rb.I,
+                    symbol=Rb.X)
+    
+    # below Cs D1 line, use intensities such that the Rb trap depth is 1mK
+    I1 = 2*kB * 1e-3 *eps0*c / Rb5S.polarisability(wl1)
+                    
+    # groundstate caesium
+    Cs6S = dipole(Cs.m, (0,1/2.,4,4), bprop,
+                    Cs.D0S, Cs.w0S, Cs.lwS, Cs.nljS,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)
+    
+    # above Cs D1 line, use intensities such that the Cs trap depth is 1mK
+    I2 = 2*kB * 1e-3 *eps0*c / Cs6S.polarisability(wl2)
+    
+    fig, ax = plt.subplots(2, 2, gridspec_kw = {'height_ratios':[3, 2],'hspace':0,'wspace':0.02}, sharex='col')    
+    for i, wl, I in [[0, wl1, I1], [1, wl2, I2]]:
+        # plot scattering rates for fixed trap depth
+        ax[0][i].semilogy(wl*1e9, Rb5S.scatRate(wl, I), color=DUsea_blue, label='Rb 5S$_{1/2}$') # Rb
+        ax[0][i].semilogy(wl*1e9, Cs6S.scatRate(wl, I), color=DUcherry_red, label='Cs 6S$_{1/2}$') # Cs
+        ax[0][i].plot([min(wl)*1e9, max(wl)*1e9], [100]*2, 'k:') # show acceptable limit
+        ax[0][i].set_ylim((2,10000))
+        # plot polarisability in the same wavelength range
+        ax[1][i].plot(wl*1e9, Rb5S.polarisability(wl)/au, color=DUsea_blue, label='Rb 5S$_{1/2}$')
+        ax[1][i].plot(wl*1e9, Cs6S.polarisability(wl)/au, color=DUcherry_red, label='Cs 6S$_{1/2}$')
+        ax[1][i].set_ylim((-6000, 6000))
+        
+        if not i: # only have y label on the lhs
+            ax[0][i].set_ylabel('Scattering Rate (s$^{-1}$)')
+            ax[1][i].set_ylabel('Polarisability ($a_0^3$)')
+        else: # remove ticks
+            ax[0][i].set_yticks([])
+            ax[1][i].set_yticks([])
+            
+        ax[1][i].set_xlim((wl[0]*1e9, wl[-1]*1e9))
+        ax[1][i].set_xlabel('Wavelength (nm)')
+    
+    # calculate trap depth
+    # Rbdepths, Csdepths = np.zeros(len(wavelengths)), np.zeros(len(wavelengths))
+    # for i in range(len(wavelengths)): # power changes to keep trap depth fixed
+    #     Rb5S.field.E0 = np.sqrt(2 * abs(Is[i]) / eps0 / c)
+    #     Cs6S.field.E0 = np.sqrt(2 * abs(Is[i]) / eps0 / c)
+    #     Rbdepths[i] = Rb5S.acStarkShift(0,0,0, wavelengths[i])/kB*1e3 # in mK
+    #     Csdepths[i] = Cs6S.acStarkShift(0,0,0, wavelengths[i])/kB*1e3 # in mK
+    # 
+    # ax1 = ax[0].twinx() # plot trap depth
+    # l3 = ax1.plot(wavelengths*1e9, Rbdepths, '--', color=DUsea_blue, label='Trap Depth', alpha=0.5)
+    # l4 = ax1.plot(wavelengths*1e9, Csdepths, '--', color=DUcherry_red, label='Trap Depth', alpha=0.5)
+    # ax1.set_ylabel('Trap Depth (mK)')
+    # ax1.set_ylim((-3, 3))
+    # lines = l1+l2+l3+l4 # order lines so that they appear next to each other in the legend
+    # ax[0].legend(lines, [l.get_label() for l in lines], ncol=2, fontsize=11)
+    
+    plt.subplots_adjust(left=0.17, right=0.95, top=0.93, bottom=0.13)
+    ax[0][1].legend()
+    ax[0][0].set_title('Rb Trap Depth 1 mK')
+    ax[0][1].set_title('Cs Trap Depth 1 mK')
+    plt.show()
 
         
 if __name__ == "__main__":
@@ -476,12 +546,13 @@ if __name__ == "__main__":
                     symbol=Rb.X)               
     
     # print(getStarkShift(Rb5P1))
-    print(getStarkShift(Rb5P3))
-    print(np.array(Rb5P3.polarisability(795e-9, HF=True, split=True))/au)
+    # print(getStarkShift(Rb5P3))
+    # print(np.array(Rb5P3.polarisability(795e-9, HF=True, split=True))/au)
     
     # combinedTrap(power=6e-3)
     # getMFStarkShifts()
-    plotPolarisability()
+    # plotPolarisability()
+    plotScatRate()
                     
     # compare Kien 2013 Fig 4,5:
     # wls = [np.linspace(680, 690, 200)*1e-9, np.linspace(930, 940, 200)*1e-9]

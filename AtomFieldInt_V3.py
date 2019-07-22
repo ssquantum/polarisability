@@ -97,6 +97,9 @@ Add in a function to calculate the scattering rate at a given wavelength
 
 20.05.19
 Function to get Stark shift of MF states for Rb or Cs on cooling/repump transition
+
+08.07.19
+include the vector polarisability in stark shift calculations
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -400,7 +403,7 @@ class dipole:
             aTvals[ii] = aT.real  # tensor polarisability
 
         # combine polarisabilities
-        
+        u = self.field.ehat
         if self.J > 0.5:
             if HF:  # hyperfine splitting is significant
                 # from Kien 2013: when stark shift << hfs splitting so there isn't mixing of F levels
@@ -427,16 +430,26 @@ class dipole:
                 if split:
                     return (aSvals, aVvals, aTvals)
                 else:
-                    return aSvals + aTvals * (3*mj**2 - self.J*(self.J + 1)
-                        ) / self.J / (2*self.J - 1)
+                    # return aSvals + aTvals * (3*mj**2 - self.J*(self.J + 1)
+                    #     ) / self.J / (2*self.J - 1)
                     # include a general polarisation of light:
-                    # u = self.field.ehat
-                    # return aSvals + mj/self.J * (np.conj(u[0])*u[1]).imag * aVvals + (
-                    # 3*abs(u[2])**2 - 1)/2. * (3*mj**2 - self.J*(self.J + 1)
-                    # ) / self.J / (2*self.J - 1)) * aTvals
+                    return aSvals + mj/self.J * np.imag(np.conj(u[0])*u[1]
+                    ) * aVvals + (3*abs(u[2])**2 - 1)/2. * (3*mj**2 - 
+                    self.J*(self.J + 1)) / self.J / (2*self.J - 1) * aTvals
         else:
-            # there is no tensor polarisability for the J=1/2 state
-            return aSvals
+            if HF: # there is no tensor polarisability for the J=1/2 state
+                aVvals *= -(-1)**(self.J + self.I + self.F) * np.sqrt(self.F * (2*self.F + 1)
+                    *(self.J + 1) *(2*self.J + 1) /self.J /(self.F + 1)) *wigner6j(self.F, 1, self.F, 
+                    self.J, self.I, self.J)
+                if split:
+                    return (aSvals, aVvals, aTvals)
+                else:
+                    return aSvals + aVvals
+            else:
+                if split:
+                    return (aSvals, aVvals, aTvals)
+                else:
+                    return aSvals+ mj/self.J*np.imag(np.conj(u[0])*u[1])*aVvals
                             
         
 #############################
@@ -881,7 +894,7 @@ def getMFStarkShifts(wavelength = 1064e-9, # laser wavelength in m
     Interested in the Cs (Rb) shifts of the F' = 4 (2) mF states relative to each other.
     
     '''
-def vmfSS(species = 'Rb'):
+def vmfSS(species = 'Cs'):
     """Return the Stark shifts of the MF states for Cs cooling/repump transitions"""
     
     plt.figure()
@@ -1081,9 +1094,9 @@ if __name__ == "__main__":
     #             power = 5e-3, # power of Cs tweezer beam in W
     #             Rbpower = 1e-3, # power of Rb tweezer beam in W 
     #             beamwaist = 1e-6)
-    # check880Trap(wavels=np.linspace(795, 930, 400)*1e-9, species='Rb')
+    check880Trap(wavels=np.linspace(795, 1100, 400)*1e-9, species='Rb')
 
-    getMFStarkShifts()
+    # getMFStarkShifts()
     # plotStarkShifts(wlrange=[800,1100])
 
     # for STATES in [[Rb5S, Rb5P],[Cs6S, Cs6P]]:
