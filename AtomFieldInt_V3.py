@@ -449,6 +449,8 @@ class dipole:
                 if split:
                     return (aSvals, aVvals, aTvals)
                 else:
+                    if mj == None: # for compatability with old scripts
+                        mj = 0
                     return aSvals+ mj/self.J*np.imag(np.conj(u[0])*u[1])*aVvals
                             
         

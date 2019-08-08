@@ -31,10 +31,10 @@ afu = 2 * np.pi * 1e3 # convert from angular frequency to kHz
 
 Cswl = 1064e-9      # wavelength of the Cs tweezer trap in m
 Rbwl = 807e-9       # wavelength of the Rb tweezer trap in m
-power = 11e-3       # power of Cs tweezer beam in W
-Cswaist = 1.2e-6    # beam waist for Cs in m
+power = 13.5e-3       # power of Cs tweezer beam in W
+Cswaist = 1.5e-6    # beam waist for Cs in m
 Rbpower = power*0.2 # power of Rb tweezer beam in W 
-Rbwaist = 1.2e-6    # beam waist fir Rb in m
+Rbwaist = 1.5e-6    # beam waist fir Rb in m
 minU0 = -0.6e-3*kB  # min acceptable combined trap depth for Cs
 factorRb = 2        # how much deeper the Rb must be in its own trap
 factorCs = 2        # how much deeper the Cs must be in its own trap
@@ -239,13 +239,13 @@ def getLD(atom, wtrap):
     return atom.field.k * np.sqrt(hbar/2./atom.m / wtrap)
 
 # in the trap with both tweezers overlapping: 
-U0Rb = Rb1064.acStarkShift(0,0,0) + Rb880.acStarkShift(0,0,0)
-U0Cs = Cs1064.acStarkShift(0,0,0) + Cs880.acStarkShift(0,0,0)
+U0Rb = Rb1064.acStarkShift(0,0,0,mj=0) + Rb880.acStarkShift(0,0,0,mj=0)
+U0Cs = Cs1064.acStarkShift(0,0,0,mj=0) + Cs880.acStarkShift(0,0,0,mj=0)
 # estimate trapping frequency by fitting quadratic U = m w^2 x^2 /2
 xmax = max([Cswaist,Rbwaist]) * 0.3 # only harmonic near the bottom
 xpos = np.linspace(-xmax, xmax, 200) # x position in m
-UCRb  = Rb1064.acStarkShift(xpos,0,0) + Rb880.acStarkShift(xpos,0,0)  # Rb potential in combined trap
-UCCs  = Cs1064.acStarkShift(xpos,0,0) + Cs880.acStarkShift(xpos,0,0)  # Cs potential in combined trap
+UCRb  = Rb1064.acStarkShift(xpos,0,0,mj=0) + Rb880.acStarkShift(xpos,0,0,mj=0)  # Rb potential in combined trap
+UCCs  = Cs1064.acStarkShift(xpos,0,0,mj=0) + Cs880.acStarkShift(xpos,0,0,mj=0)  # Cs potential in combined trap
 quad = lambda x, a, c: a*x**2 + c
 Rbpopt, Rbpcov = curve_fit(quad, xpos, UCRb, p0=(1,U0Rb), maxfev=80000) # popt: (gradient, offset)
 Cspopt, Cspcov = curve_fit(quad, xpos, UCCs, p0=(1,U0Cs), maxfev=80000)
@@ -259,8 +259,8 @@ wrCs /= afu                                        # in kHz
 def checkfit():
     """Graph showing the fitted quadratic to prove that it's good"""
     xtra = np.linspace(-xmax*5, xmax*5, 200)  # extend the range 
-    UCRb  = Rb1064.acStarkShift(xtra,0,0) + Rb880.acStarkShift(xtra,0,0)  # Rb potential in combined trap
-    UCCs  = Cs1064.acStarkShift(xtra,0,0) + Cs880.acStarkShift(xtra,0,0)  # Cs potential in combined trap
+    UCRb  = Rb1064.acStarkShift(xtra,0,0,mj=0) + Rb880.acStarkShift(xtra,0,0,mj=0)  # Rb potential in combined trap
+    UCCs  = Cs1064.acStarkShift(xtra,0,0,mj=0) + Cs880.acStarkShift(xtra,0,0,mj=0)  # Cs potential in combined trap
     plt.figure()
     plt.plot(xtra*1e6, UCRb/kB*1e3, default_colours.DUsea_blue, label='Rb $\omega_r/2\pi = %.3g$ kHz'%wrRb)
     plt.plot(xtra*1e6, quad(xtra, *Rbpopt)/kB*1e3, '--', color=default_colours.DUsea_blue)
@@ -276,15 +276,15 @@ def axialfit():
     """Graph fitting a quadratic to the potential in the axial direction"""
     zmax = max([Cswaist,Rbwaist])  # only harmonic near the bottom
     zpos = np.linspace(-zmax, zmax, 200) # x position in m
-    UCRb  = Rb1064.acStarkShift(0,0,zpos) + Rb880.acStarkShift(0,0,zpos)  # Rb potential in combined trap
-    UCCs  = Cs1064.acStarkShift(0,0,zpos) + Cs880.acStarkShift(0,0,zpos)  # Cs potential in combined trap
+    UCRb  = Rb1064.acStarkShift(0,0,zpos,mj=0) + Rb880.acStarkShift(0,0,zpos,mj=0)  # Rb potential in combined trap
+    UCCs  = Cs1064.acStarkShift(0,0,zpos,mj=0) + Cs880.acStarkShift(0,0,zpos,mj=0)  # Cs potential in combined trap
     Rbpopt, _ = curve_fit(quad, zpos, UCRb, p0=(1,U0Rb), maxfev=80000) # popt: (gradient, offset)
     Cspopt, _ = curve_fit(quad, zpos, UCCs, p0=(1,U0Cs), maxfev=80000)
     wzRb = np.sqrt(abs(Rbpopt[0])*2 / Rb.m) /afu           # axial trapping frequency for Rb in kHz
     wzCs = np.sqrt(abs(Cspopt[0])*2 / Cs.m) /afu           # axial trapping frequency for Cs in kHz
     zxtra = np.linspace(-zmax*5, zmax*5, 200)  # extend the range 
-    UCRb  = Rb1064.acStarkShift(0,0,zxtra) + Rb880.acStarkShift(0,0,zxtra)  # Rb potential in combined trap
-    UCCs  = Cs1064.acStarkShift(0,0,zxtra) + Cs880.acStarkShift(0,0,zxtra)  # Cs potential in combined trap
+    UCRb  = Rb1064.acStarkShift(0,0,zxtra,mj=0) + Rb880.acStarkShift(0,0,zxtra,mj=0)  # Rb potential in combined trap
+    UCCs  = Cs1064.acStarkShift(0,0,zxtra,mj=0) + Cs880.acStarkShift(0,0,zxtra,mj=0)  # Cs potential in combined trap
     plt.figure()
     plt.plot(zxtra*1e6, UCRb/kB*1e3, default_colours.DUsea_blue, label=r'Rb $\omega_z/2\pi=%.3g$ kHz, $\eta=%.2g$'%(wzRb, getLD(Rb880, wzRb*afu)))
     plt.plot(zxtra*1e6, quad(zxtra, *Rbpopt)/kB*1e3, '--', color=default_colours.DUsea_blue)
@@ -310,7 +310,7 @@ Caesium:        trap depth %.3g mK
 # with just the Cs tweezer trap:
 def trap_freq(atom):
     """Get the trapping frequency of a dipole object"""
-    return np.sqrt(4*abs(atom.acStarkShift(0,0,0)) / atom.m / atom.field.w0**2)
+    return np.sqrt(4*abs(atom.acStarkShift(0,0,0,mj=0)) / atom.m / atom.field.w0**2)
 
 wrRb1064 = trap_freq(Rb1064)  # Rb trapping frequency in 1064nm trap in rad/s
 wrCs1064 = trap_freq(Cs1064)  # Cs trapping frequency in 1064nm trap in rad/s
@@ -319,8 +319,8 @@ Rubidium:       trap depth %.3g mK, scattering rate %.3g Hz
                 radial trapping frequency %.0f kHz, Lamb-Dicke parameter %.3g 
 Caesium:        trap depth %.3g mK, scattering rate %.3g Hz
                 radial trapping frequency %.0f kHz, Lamb-Dicke parameter %.3g """%(
-                Cswl*1e9, Rb1064.acStarkShift(0,0,0)/kB*1e3, Rb1064.scatRate(1064e-9, Cs1064.field.I),
-                wrRb1064/afu, getLD(Rb1064, wrRb1064), Cs1064.acStarkShift(0,0,0)/kB*1e3, 
+                Cswl*1e9, Rb1064.acStarkShift(0,0,0,mj=0)/kB*1e3, Rb1064.scatRate(1064e-9, Cs1064.field.I),
+                wrRb1064/afu, getLD(Rb1064, wrRb1064), Cs1064.acStarkShift(0,0,0,mj=0)/kB*1e3, 
                 Cs1064.scatRate(), wrCs1064/afu, getLD(Cs1064, wrCs1064)))
 
 def plotmerge(n=3):
@@ -334,15 +334,15 @@ def plotmerge(n=3):
         for i in range(n):
             ax = plt.subplot2grid((n,1), (i,0))
             if atoms[0].X == 'Rb':
-                minU0 = (atoms[0].acStarkShift(0,0,0) + atoms[1].acStarkShift(0,0,0))/kB*1.1e3
+                minU0 = (atoms[0].acStarkShift(0,0,0,mj=0) + atoms[1].acStarkShift(0,0,0,mj=0))/kB*1.1e3
                 maxU0 = 0.16
             elif atoms[0].X=='Cs':
-                minU0 = atoms[0].acStarkShift(0,0,0)/kB*1.1e3
-                maxU0 = atoms[1].acStarkShift(0,0,0)/kB*1.1e3
+                minU0 = atoms[0].acStarkShift(0,0,0,mj=0)/kB*1.1e3
+                maxU0 = atoms[1].acStarkShift(0,0,0,mj=0)/kB*1.1e3
             # combined potential along the beam axis:
-            U = (atoms[0].acStarkShift(xs,0,0) + atoms[1].acStarkShift(xs-sep[n-i-1],0,0))/kB*1e3 
-            U1064 = atoms[0].acStarkShift(xs,0,0)/kB*1e3         # potential in the 1064 trap
-            U880 = atoms[1].acStarkShift(xs-sep[n-i-1],0,0)/kB*1e3 # potential in the 880 trap
+            U = (atoms[0].acStarkShift(xs,0,0,mj=0) + atoms[1].acStarkShift(xs-sep[n-i-1],0,0,mj=0))/kB*1e3 
+            U1064 = atoms[0].acStarkShift(xs,0,0,mj=0)/kB*1e3         # potential in the 1064 trap
+            U880 = atoms[1].acStarkShift(xs-sep[n-i-1],0,0,mj=0)/kB*1e3 # potential in the 880 trap
             plt.plot(xs*1e6, U, 'k')
             plt.plot(xs*1e6, U1064, color=default_colours.DUcherry_red, alpha=0.6)
             plt.plot(xs*1e6, U880, color=default_colours.DUsea_blue, alpha=0.6)
@@ -381,8 +381,8 @@ def plotTweezers():
     """make a figure showing the Rb and Cs tweezer potentials side-by-side"""
     wid = max([Cswaist, Rbwaist])*1e6 # width of tweezer trap in microns
     xs = np.linspace(-wid, wid*3, 200)    # positions along the beam axis in microns
-    URb = (Rb1064.acStarkShift(xs*1e-6,0,0) + Rb880.acStarkShift((xs-2*wid)*1e-6,0,0))/kB*1e3   # Rb potential in mK
-    UCs = (Cs1064.acStarkShift(xs*1e-6,0,0) + Cs880.acStarkShift((xs-2*wid)*1e-6,0,0))/kB*1e3   # Cs potential in mK
+    URb = (Rb1064.acStarkShift(xs*1e-6,0,0,mj=0) + Rb880.acStarkShift((xs-2*wid)*1e-6,0,0,mj=0))/kB*1e3   # Rb potential in mK
+    UCs = (Cs1064.acStarkShift(xs*1e-6,0,0,mj=0) + Cs880.acStarkShift((xs-2*wid)*1e-6,0,0,mj=0))/kB*1e3   # Cs potential in mK
     both = np.concatenate((URb, UCs))
     plt.figure()
     plt.plot(xs, UCs, color=default_colours.DUcherry_red) # Cs potential

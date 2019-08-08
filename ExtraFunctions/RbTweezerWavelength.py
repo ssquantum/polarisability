@@ -17,7 +17,7 @@ wavels = np.linspace(795,850,500)*1e-9 # wavelengths in m to plot
 power = 5e-3            # beam power in W
 # beam waists are only used to calculate the Lambe-Dicke parameter
 Cswaist = 1.2e-6        # beam waist of Cs tweezer in m
-Rbwaist = 0.9e-6        # beam waist of Rb tweezer in m
+Rbwaist = 1.2e-6        # beam waist of Rb tweezer in m
 
 # create dipole objects for ground and excited state Rb / Cs
 bprop = [wavelength, power, Rbwaist]
@@ -185,4 +185,16 @@ ax3.legend()
 # ax5.text(800, 1e5, 'Crossover: %.4g nm, Acceptable region: %.4g - %.4g nm'
 #         %(cross, lolim, uplim))
 plt.tight_layout()
+plt.show()
+
+# plot the average number of scattered photons in 10ms as a function of tweezer wavelength:
+NCs = 0.01 * (CsRsc_Cs + CsRsc) # average number of photons the Cs atom scatters in 10ms
+NRb = 0.01 * (RbRsc_Cs + RbRsc) # average number of photons the Rb atom scatters in 10ms
+plt.plot(wavels*1e9, NRb[:-1], label='Rb')
+plt.plot(wavels*1e9, NCs[:-1], label='Cs')
+plt.title('Photon scattering in the combined trap')
+plt.xlabel('Wavelength of Rb tweezer (nm)')
+plt.ylabel('Average number of scattered photons in 10ms')
+plt.legend()
+plt.ylim((0,1))
 plt.show()

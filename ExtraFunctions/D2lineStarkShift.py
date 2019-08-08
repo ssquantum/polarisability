@@ -57,7 +57,7 @@ def getMFStarkShifts(wavelength = 1064e-9, # laser wavelength in m
     plt.show()
 
 if __name__ == "__main__":
-    getMFStarkShifts(wavelength = 1064e-9, # laser wavelength in m
-                    power = 0.00875736,    # laser power in W
+    getMFStarkShifts(wavelength = 812e-9, # laser wavelength in m
+                    power = 0.00194652,    # laser power in W
                     beamwaist = 1.2e-6,      # beam waist in m
-                    ATOM = Cs)
+                    ATOM = Rb)
