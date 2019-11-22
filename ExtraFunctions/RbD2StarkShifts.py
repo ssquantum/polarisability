@@ -21,7 +21,7 @@ def getMFStarkShifts(wavelength = 1064e-9, # laser wavelength in m
     numstates = sum(2*np.array(Fs)+1)*3 # total number of hyperfine transitions
     l1 = [6,12] # index of lines for making legend
     #
-    states = np.zeros((numstates, 3)) # F, MF, MFprime
+    states = np.zeros((numstates, 3), dtype=int) # F, MF, MFprime
     shifts = np.zeros(numstates)      # differential ac Stark shifts
     i = 0       # index 
     for F in Fs:

@@ -263,6 +263,26 @@ Rb = atom( S1_2DME = S1_2[:,3], P1_2DME = P1_2[:,3], P3_2DME = P3_2[:,3], # matr
     symbol = 'Rb')
 
 
+######### atomic properties for K-41:  ###########
+# file contains columns: n, l, j, dipole matrix element, wavelength, linewidth
+# for the 4S1/2 state:
+S1_2 = np.loadtxt(r'.\TransitionData\KS1_2.dat', delimiter=',', skiprows=1)
+        
+# for the 4P1/2 state:
+P1_2 = np.loadtxt(r'.\TransitionData\KP1_2.dat', delimiter=',', skiprows=1)
+
+# for the 4P3/2 state:
+P3_2 = np.loadtxt(r'.\TransitionData\KP3_2.dat', delimiter=',', skiprows=1)
+
+K = atom( S1_2DME = S1_2[:,3], P1_2DME = P1_2[:,3], P3_2DME = P3_2[:,3], # matrix elements
+    S1_2RW = S1_2[:,4], P1_2RW = P1_2[:,4], P3_2RW = P3_2[:,4], # resonant wavelengths
+    S1_2LW = S1_2[:,5], P1_2LW = P1_2[:,5], P3_2LW = P3_2[:,5], # natural linewidths
+    S1_nlj = S1_2[:,:3], P1_nlj = P1_2[:,:3], P3_nlj = P3_2[:,:3], # final state of transition
+    mass = 41*amu,        # mass in kg
+    nuclear_spin = 3/2.,   # intrinsic angular momentum quantum number of the nucleus
+    symbol = 'K')
+
+
 #######################
 
 
@@ -444,7 +464,7 @@ class dipole:
                 if split:
                     return (aSvals, aVvals, aTvals)
                 else:
-                    return aSvals + aVvals
+                    return aSvals #+ aVvals
             else:
                 if split:
                     return (aSvals, aVvals, aTvals)
@@ -702,6 +722,9 @@ def runGUI():
         elif atomSymbol == "Cs":
             atomObj = Cs
             F = 3
+        elif atomSymbol == "K":
+            atomObj = K
+            F = 1
         else:
             messagebox.showinfo("Error", "You must choose Rb or Cs")
             return 0
@@ -903,7 +926,7 @@ def vmfSS(species = 'Cs'):
     
     if species == 'Cs':
         F = 5
-        bprop = [1064e-9, 6e-3, 1e-6]      # wavelength, beam power, beam waist
+        bprop = [938e-9, 8e-3, 1.7e-6]      # wavelength, beam power, beam waist
         for MFp in range(-F, F+1, 1):
             P = dipole(Cs.m, (1,3/2.,F,MFp), bprop,
                        Cs.D0P3, Cs.w0P3, Cs.lwP3, Cs.nljP3,
@@ -915,7 +938,7 @@ def vmfSS(species = 'Cs'):
         
     elif species == 'Rb':
         F = 3
-        bprop = [810e-9, 2.7e-3, 1.5e-6]      # wavelength, beam power, beam waist
+        bprop = [940e-9, 35e-3, 1.7e-6]      # wavelength, beam power, beam waist
         for MFp in range(-F, F+1, 1):
             P = dipole(Rb.m, (1,3/2.,F,MFp), bprop,
                        Rb.D0P3, Rb.w0P3, Rb.lwP3, Rb.nljP3,
@@ -923,9 +946,9 @@ def vmfSS(species = 'Cs'):
                        symbol=Rb.X)
             Pshift = P.acStarkShift(0,0,0, bprop[0], HF=True)/h/1e6    # interested in how the EStates shift relative to each other
             s, v, t = P.polarisability(bprop[0], mj=3/2, HF=False, split=True)
-            print('split ',s/au, t/au)
+           # print('split ',s/au, t/au)
             s, v, t = P.polarisability(bprop[0], mj=3/2, HF=True, split=True)
-            print('avrge ',s/au, t/au)
+         #   print('avrge ',s/au, t/au)
             plt.plot(MFp, Pshift, '_', markersize=15, linewidth=10, color = '#7E317B')
             print("|F' = "+str(F)+", m_F' = "+str(MFp)+"> : %.5g MHz"%Pshift)
     
@@ -1089,14 +1112,14 @@ if __name__ == "__main__":
         runGUI()
         sys.exit() # don't run any of the other code below
         
-    # vmfSS()
+    vmfSS('Rb')
 
     # combinedTrap(Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
     #             Rbwl = 810e-9, # wavelength of the Rb tweezer trap in m
     #             power = 5e-3, # power of Cs tweezer beam in W
     #             Rbpower = 1e-3, # power of Rb tweezer beam in W 
     #             beamwaist = 1e-6)
-    check880Trap(wavels=np.linspace(795, 1100, 400)*1e-9, species='Rb')
+    #check880Trap(wavels=np.linspace(795, 1100, 400)*1e-9, species='Rb')
 
     # getMFStarkShifts()
     # plotStarkShifts(wlrange=[800,1100])

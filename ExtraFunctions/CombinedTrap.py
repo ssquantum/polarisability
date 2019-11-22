@@ -29,11 +29,11 @@ from AtomFieldInt_V3 import (dipole, Rb, Cs, c, eps0, h, hbar, a0, e, me,
 
 afu = 2 * np.pi * 1e3 # convert from angular frequency to kHz
 
-Cswl = 1064e-9      # wavelength of the Cs tweezer trap in m
-Rbwl = 807e-9       # wavelength of the Rb tweezer trap in m
-power = 13.5e-3       # power of Cs tweezer beam in W
+Cswl = 932e-9      # wavelength of the Cs tweezer trap in m
+Rbwl = 814e-9       # wavelength of the Rb tweezer trap in m
+power = 8e-3       # power of Cs tweezer beam in W
 Cswaist = 1.5e-6    # beam waist for Cs in m
-Rbpower = power*0.2 # power of Rb tweezer beam in W 
+Rbpower = power*0.43 # power of Rb tweezer beam in W 
 Rbwaist = 1.5e-6    # beam waist fir Rb in m
 minU0 = -0.6e-3*kB  # min acceptable combined trap depth for Cs
 factorRb = 2        # how much deeper the Rb must be in its own trap
@@ -322,6 +322,17 @@ Caesium:        trap depth %.3g mK, scattering rate %.3g Hz
                 Cswl*1e9, Rb1064.acStarkShift(0,0,0,mj=0)/kB*1e3, Rb1064.scatRate(1064e-9, Cs1064.field.I),
                 wrRb1064/afu, getLD(Rb1064, wrRb1064), Cs1064.acStarkShift(0,0,0,mj=0)/kB*1e3, 
                 Cs1064.scatRate(), wrCs1064/afu, getLD(Cs1064, wrCs1064)))
+
+wrRb880 = trap_freq(Rb880)  # Rb trapping frequency in 1064nm trap in rad/s
+wrCs880 = trap_freq(Cs880)  # Cs trapping frequency in 1064nm trap in rad/s
+print("""\nIn just the %.0fnm trap:
+Rubidium:       trap depth %.3g mK, scattering rate %.3g Hz
+                radial trapping frequency %.0f kHz, Lamb-Dicke parameter %.3g 
+Caesium:        trap depth %.3g mK, scattering rate %.3g Hz
+                radial trapping frequency %.0f kHz, Lamb-Dicke parameter %.3g """%(
+                Rbwl*1e9, Rb880.acStarkShift(0,0,0,mj=0)/kB*1e3, Rb880.scatRate(1064e-9, Cs880.field.I),
+                wrRb880/afu, getLD(Rb880, wrRb880), Cs880.acStarkShift(0,0,0,mj=0)/kB*1e3, 
+                Cs880.scatRate(), wrCs880/afu, getLD(Cs880, wrCs880)))
 
 def plotmerge(n=3):
     """plot merging traps with n timesteps"""
