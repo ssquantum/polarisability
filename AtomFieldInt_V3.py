@@ -100,6 +100,9 @@ Function to get Stark shift of MF states for Rb or Cs on cooling/repump transiti
 
 08.07.19
 include the vector polarisability in stark shift calculations
+
+23.11.19
+Introduce Potassium 41
 """
 import numpy as np
 import matplotlib.pyplot as plt
