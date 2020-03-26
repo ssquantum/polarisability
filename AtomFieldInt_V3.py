@@ -103,6 +103,9 @@ include the vector polarisability in stark shift calculations
 
 23.11.19
 Introduce Potassium 41
+
+16.03.20
+Replace wigner functions with ones from sympy
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -111,6 +114,14 @@ import os
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 from math import factorial 
 from matplotlib.ticker import AutoLocator
+from sympy.physics.wigner import wigner_6j, wigner_3j
+
+# see https://docs.sympy.org/latest/modules/physics/wigner.html for documentation
+def wigner3j(*args):
+    return float(wigner_3j(*args))
+
+def wigner6j(*args):
+    return float(wigner_6j(*args))
 
 # global constants:
 c    = 2.99792458e8  # speed of light in m/s
@@ -125,65 +136,6 @@ amu = 1.6605390e-27  # atomic mass unit in kg
 Eh = me * e**4 /(4. *np.pi *eps0 *hbar)**2  # the Hartree energy
 au = e**2 * a0**2 / Eh # atomic unit for polarisability
 # note that atomic unit au = 4 pi eps0 a0^3
-
-def tric(a, b, c):
-    """Return the value of the triangle coefficient. Used for Wigner 6j symbol"""
-    return (factorial(a + b - c) * factorial(a - b + c) * factorial(-a + b + c) 
-                    )/ float(factorial(a + b + c + 1))
-                
-def wigner3j(j1, j2, j3, m1, m2, m3):
-    """Return the value of the Wigner 3j symbol. m quantum numbers must be 
-    within -j,..,j, and satisfy m1+m2=m3, the js must satisfy the triangle
-    inequality, and sum(js) must be integer."""
-    
-    # conditions for the value to be non-zero:
-    if abs(m1) > abs(j1) or abs(m2) > abs(j2) or abs(m3) > abs(j3):
-        return 0
-        
-    elif m1 + m2 != -m3 or abs(j1 - j2) > j3 or j1 + j2 < j3 or (j1+j2+j3)%1!=0:
-        return 0    
-    
-    facts = np.sqrt(tric(j1,j2,j3)) # factor of sqrt factorials in front of sum
-    for j, m in [[j1,m1], [j2,m2], [j3,m3]]:
-        facts *= np.sqrt(factorial(j + m) * factorial(j - m))
-        
-    tsum = 0
-    for t in range(int(j1 + j2 + j3)):
-        try:
-            tsum += (-1)**t /float(factorial(t)) /float(factorial(j3-j2+t+m1)
-                )/float(factorial(j3-j1+t-m2)) /float(factorial(j1+j2-j3-t)
-                ) /float(factorial(j1-t-m1)) /float(factorial(j2-t-m2))
-        except ValueError:
-            # sum is only over positive factorials
-            tsum += 0
-            
-    return (-1)**(j1 - j2 - m3) * facts * tsum
-
-def wigner6j(j1, j2, j3, J1, J2, J3):
-    """Return the value of the Wigner 6j symbol. Triads must satisfy the 
-    triangle inequalities and sum to an integer, otherwise the wigner 6j is 0."""
-    
-    tripls = 1      # factor of triangle coefficients in front of the sum
-    for v in [[j1,j2,j3],[j1,J2,J3],[J1,j2,J3],[J1,J2,j3]]:
-        if v[2] < abs(v[1]-v[0]) or v[2] > v[1] + v[0] or sum(v)%1 != 0:
-            return 0   # must satisfy triangle inequality and sum to an integer
-            
-        else:
-            tripls *= np.sqrt(tric(*v))
-    
-    tsum = 0
-    for t in range(int(round(j1+j2+j3+J1+J2+J3+1))):
-        try:
-            tsum += (-1)**t * factorial(t+1) /float(factorial(t-j1-j2-j3)
-            )/float(factorial(t-j1-J2-J3)) /float(factorial(t-J1-j2-J3)
-            )/ float(factorial(t-J1-J2-j3)) /float(factorial(j1+j2+J1+J2-t)
-            ) /float(factorial(j2+j3+J2+J3-t)) / float(factorial(j1+j3+J1+J3-t))
-        except ValueError:
-            # sum is only over positive factorials
-            tsum += 0
-    
-    return tripls * tsum
-    
 
 #####################
     
