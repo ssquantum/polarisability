@@ -696,7 +696,7 @@ def runGUI():
             'Atom (Rb/Cs): ', 'Orbital angular momentum L: ', 
             'Total angular momentum J: ']
     entrystrings = [tkinter.StringVar() for i in range(len(labeltext))]
-    default = ['880e-9', '1e-6', '20e-3', 'Rb', '0', '0.5']
+    default = ['932e-9', '1e-6', '3.9e-3', 'Cs', '0', '0.5']
     
     
     for i in range(len(labeltext)):
