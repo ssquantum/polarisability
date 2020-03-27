@@ -1,0 +1,69 @@
+"""Trying to calculate the Raman Rabi frequency between ground state hyperfine sublevels
+not yet accurate - need to find the error."""
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
+import sys
+sys.path.append(r'..')
+from AtomFieldInt_V3 import c, eps0, hbar, a0, e, Rb, Cs, wigner3j, wigner6j
+
+def singleRabi(dme, E, J, Jp, F, mf, Fp, mfp, I, q):
+    return (-1)**(J+I+mf) * dme * np.sqrt((2*Fp+1)*(2*F+1)*(2*J+1)) *wigner6j(J, Jp, 1, Fp, F, I) *wigner3j(Fp, 1, F, mfp, -q, -mf) *E/hbar
+
+def RabiFreq(atom, P, w0, omega, J, Fa, mfa, Fb, mfb, qa, qb):
+    """atom -- instance of AtomFieldInt_V3.atom()
+    P -- power in W
+    w0 -- beam waist in m
+    omega -- Raman beam frequency in rad/s
+    J -- ground state orbital angular momentum number
+    Fa -- hyperfine state a
+    mfa -- projection of hyperfine state a
+    Fb -- hyperfine state b
+    mfb -- projection of hyperfine state b
+    q -- circulation polarisation (0 for pi, +/-1 for sigma)
+    """
+    Rabi = 0
+    E = np.sqrt(4*P / np.pi / eps0 / c / w0**2)
+    terms = [[E]] # for debugging
+    for i in [0,5]: # range(len(atom.nljS)):  - should include all transitions but then it overestimates
+        Jp = atom.nljS[i][2] 
+        Delta = atom.w0S[i] - omega
+        terms.append([Jp, atom.D0S[i]/2**0.5/e/a0, Delta/2/np.pi/1e9])
+        for Fp in range(int(abs(atom.I-Jp)), int(atom.I+Jp)+1):
+            for mfp in range(-Fp, Fp+1):
+                # note: here we're using Steck's definition of the reduced DME
+                # differs by sqrt(2) from e.g. Arora 2007's definition
+                contribution = singleRabi(atom.D0S[i]/2**0.5, E, J, Jp, Fa, mfa, Fp, mfp, atom.I, qa) \
+                    * singleRabi(atom.D0S[i]/2**0.5, E, J, Jp, Fb, mfb, Fp, mfp, atom.I, qb) /2 /Delta
+                terms.append([Fp, mfp, singleRabi(1, hbar, J, Jp, Fa, mfa, Fp, mfp, atom.I, qa),
+                    singleRabi(1, hbar, J, Jp, Fb, mfb, Fp, mfp, atom.I, qb), contribution])
+                Rabi += contribution
+    for i in range(len(terms)):
+        if len(terms[i])==5: terms[i][-1] /= Rabi # fractional contribution
+    terms = [[np.around(x, 3) for x in y] for y in terms]
+    return (Rabi, terms)
+
+power = 117.3e-6 # in W
+waist = 80e-6 # in m
+detun = 2*np.pi*(c/780.241209686e-9 - 30e9) # 30GHz off D2 line .241209686
+print('Raman Rabi frequency: %.3g kHz'%(RabiFreq(Rb, power, waist, detun, 0.5, 1,1, 2,2, 1,0)[0] / 2/np.pi / 1e3)) 
+# for vals in RabiFreq(Rb, power, waist, detun, 0.5, 1,0, 2,0, 1,1)[1]:
+#     print(*vals)
+    
+# lamb-dicke parameter 
+# momentum kick from perpendicular beams R1 + R2
+# n = np.sqrt(hbar / 2 / Rb.m / 2/np.pi/20e3) * 2*np.pi/780e-9
+
+# checking calculations against https://steck.us/alkalidata/rubidium87numbers.1.6.pdf
+# sigmaplus = np.array([6, 24/5, 24/5, 24, 8, 4, 20, 40, 120, 12, 8, 8, 12, 30, 10, 5, 3, 2])**0.5
+# pi = np.array([6, 24/5, 0, 24/5, 8, 6, 8, 40, 30, 40, 6, 24, 0, 24, 6, 6, 15/4, 10/3, 15/4, 6])**0.5
+# i=0
+# for F in [1,2]:
+#     for Fp in range(F-1, F+2):       
+#             for mf in range(-min(F,Fp), min(F,Fp)+1):
+#                     print(F, mf, Fp, singleRabi(1,hbar,.5,1.5, F,mf,Fp,mf,1.5,0)*pi[i])
+#                     i+=1
+
+# Fung's thesis: 85Rb => I=5/2, |2,0> -> |3,0>, P1 = 55uW, P2 = 250uW, w0 = 80um, q1 = q2 = 1, detun = 30GHz from D2 line
+# print('Fung Raman Rabi: %.3g kHz'%(4*np.sqrt(55e-6*250e-6)/eps0/c/np.pi/80e-6**2 * (4.227*e*a0)**2 *np.sqrt(7/36/63 + 4*5/45/36) /2 /2/np.pi/30e9 / hbar**2 /2/np.pi/1e3))
