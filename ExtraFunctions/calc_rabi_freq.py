@@ -1,5 +1,5 @@
 """Trying to calculate the Raman Rabi frequency between ground state hyperfine sublevels
-not yet accurate - need to find the error."""
+not confirmed if the result is accurate yet."""
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -26,7 +26,7 @@ def RabiFreq(atom, P, w0, omega, J, Fa, mfa, Fb, mfb, qa, qb):
     Rabi = 0
     E = np.sqrt(4*P / np.pi / eps0 / c / w0**2)
     terms = [[E]] # for debugging
-    for i in [0,5]: # range(len(atom.nljS)):  - should include all transitions but then it overestimates
+    for i in np.where(atom.nljS[:,0] == np.min(atom.nljS[:,0]))[0]: # range(len(atom.nljS)):  - should include all transitions but then it overestimates
         Jp = atom.nljS[i][2] 
         Delta = atom.w0S[i] - omega
         terms.append([Jp, atom.D0S[i]/2**0.5/e/a0, Delta/2/np.pi/1e9])
@@ -46,8 +46,9 @@ def RabiFreq(atom, P, w0, omega, J, Fa, mfa, Fb, mfb, qa, qb):
 
 power = 117.3e-6 # in W
 waist = 80e-6 # in m
-detun = 2*np.pi*(c/780.241209686e-9 - 30e9) # 30GHz off D2 line .241209686
+detun = 2*np.pi*(c/780.241209686e-9 - 30e9) # 30GHz off D2 line 780.241209686
 print('Raman Rabi frequency: %.3g kHz'%(RabiFreq(Rb, power, waist, detun, 0.5, 1,1, 2,2, 1,0)[0] / 2/np.pi / 1e3)) 
+# RabiFreq(Cs, 117.3e-6, 80e-6, 2*np.pi*(c/8.52347065e-7-30e9), 0.5, 3,3, 4,4, 1,0)[0]/2/np.pi/1e3
 # for vals in RabiFreq(Rb, power, waist, detun, 0.5, 1,0, 2,0, 1,1)[1]:
 #     print(*vals)
     
