@@ -33,7 +33,7 @@ Cswl = 938e-9      # wavelength of the Cs tweezer trap in m
 Rbwl = 938.1e-9       # wavelength of the Rb tweezer trap in m
 power = 2e-3*0.726       # power of Cs tweezer beam in W
 Cswaist = 1.1e-6    # beam waist for Cs in m
-Rbpower = power*0.1 # power of Rb tweezer beam in W 
+Rbpower = power*0.9 # power of Rb tweezer beam in W 
 Rbwaist = 1.1e-6    # beam waist fir Rb in m
 minU0 = -0.6e-3*kB  # min acceptable combined trap depth for Cs
 factorRb = 2        # how much deeper the Rb must be in its own trap
@@ -386,63 +386,54 @@ def plotTweezers():
     plt.xlim((min(xs), max(xs)))
     plt.tight_layout()
 
-def plotcross12():
-    """Use conditions 1 and 2 to find the maximum Rb tweezer wavelength as a 
-    function of Cs beam power"""
-    wavels = np.linspace(800, 830, 100) * 1e-9 # wavelengths to consider in m
-    crossovers = []
-    pratio     = []
-    powers = np.linspace(7,20,50)*1e-3
-    for p in powers:
-        ratio1 = P1Rb(Cswl, wavels, Cspower=p)/p # condition 1
-        ratio2 = P2Rb(Cswl, wavels, Cspower=p)/p # condition 2
-        diff = abs(ratio2 - ratio1)
-        crossovers.append(wavels[np.argmin(diff)]) # wavelength where ratio1 crosses ratio2
-        pratio.append(P1Rb(Cswl, wavels[np.argmin(diff)], Cspower=p)/p) # power ratio at crossover
+# def plotcross12():
+#     """Use conditions 1 and 2 to find the maximum Rb tweezer wavelength as a 
+#     function of Cs beam power"""
+#     wavels = np.linspace(800, 830, 100) * 1e-9 # wavelengths to consider in m
+#     crossovers = []
+#     pratio     = []
+#     powers = np.linspace(7,20,50)*1e-3
+#     for p in powers:
+#         ratio1 = P1Rb(Cswl, wavels, Cspower=p)/p # condition 1
+#         ratio2 = P2Rb(Cswl, wavels, Cspower=p)/p # condition 2
+#         diff = abs(ratio2 - ratio1)
+#         crossovers.append(wavels[np.argmin(diff)]) # wavelength where ratio1 crosses ratio2
+#         pratio.append(P1Rb(Cswl, wavels[np.argmin(diff)], Cspower=p)/p) # power ratio at crossover
 
-    fig, ax1 = plt.subplots()
-    ax1.plot(powers*1e3, np.array(crossovers)*1e9, 'ko')
-    ax1.set_xlabel('Cs beam power (mW)')
-    ax1.set_ylabel('Crossover wavelength (nm)')
+#     fig, ax1 = plt.subplots()
+#     ax1.plot(powers*1e3, np.array(crossovers)*1e9, 'ko')
+#     ax1.set_xlabel('Cs beam power (mW)')
+#     ax1.set_ylabel('Crossover wavelength (nm)')
 
-    ax2 = ax1.twinx()
-    ax2.plot(powers*1e3, pratio, 'x', color='tab:red') # power ratios at the crossover wavelength
-    ax2.set_ylabel('Power ratio ($P_{Rb}/P_{Cs}$)', color='tab:red')
-    ax2.tick_params(axis='y', labelcolor='tab:red')
+#     ax2 = ax1.twinx()
+#     ax2.plot(powers*1e3, pratio, 'x', color='tab:red') # power ratios at the crossover wavelength
+#     ax2.set_ylabel('Power ratio ($P_{Rb}/P_{Cs}$)', color='tab:red')
+#     ax2.tick_params(axis='y', labelcolor='tab:red')
 
 
 if __name__ == "__main__":
     # only plot if the user passes a second argument, this acts like verbosity level
     # e.g. python CombinedTrap.py 1
-#    if np.size(sys.argv) > 1:
-#        if any([argv == '12' for argv in sys.argv]):
-#            plotc12() # threshold conditions 1 and 2
-#        if any([argv == '23' for argv in sys.argv]):
-#            plotc23() # Rbwl vs Cswl from threshold conditions 2 and 3
-#        if any([argv == '123' for argv in sys.argv]):
-#            plotc123() # PRb vs wavelength from all threshold conditions
-#        if any([argv == 'merge' for argv in sys.argv]):
-#            plotmerge() # merging tweezers
-#        if any([argv == 'cross12' for argv in sys.argv]):
-#            plotcross12() # Rbwl vs PCs from threshold conditions 2 and 3
-#        if any([argv == 'checkfit' for argv in sys.argv]):
-#            checkfit() # Check the fit of the quadratic to the combined potential
-#        if any([argv == 'axialfit' for argv in sys.argv]):
-#            axialfit() # fit to the potential in the  axial direction 
-#        if any([argv == 'vary' for argv in sys.argv]):
-#            plotcvary() # Rbwl vs Cswl for different threshold conditions stringency
-#        if any([argv == 'tweezer' for argv in sys.argv]):
-#            plotTweezers() # figure showing the Rb and Cs potentials from tweezers
-#        if any([argv == 'all' for argv in sys.argv]):
-#            # plotc12()
-#            # plotc23()
-#            plotcvary()
-#            checkfit()
-#            axialfit()
-#            plotc123()
-#            plotmerge()
-#            plotcross12()
-#        plt.show()
-    plt.clf()
-    plotTweezers()
-    plt.show()
+   if np.size(sys.argv) > 1:
+    #    if any([argv == '12' for argv in sys.argv]):
+    #        plotc12() # threshold conditions 1 and 2
+    #    if any([argv == '23' for argv in sys.argv]):
+    #        plotc23() # Rbwl vs Cswl from threshold conditions 2 and 3
+    #    if any([argv == '123' for argv in sys.argv]):
+    #        plotc123() # PRb vs wavelength from all threshold conditions
+       if any([argv == 'merge' for argv in sys.argv]):
+           plotmerge() # merging tweezers
+    #    if any([argv == 'cross12' for argv in sys.argv]):
+    #        plotcross12() # Rbwl vs PCs from threshold conditions 2 and 3
+    #    if any([argv == 'checkfit' for argv in sys.argv]):
+    #        checkfit() # Check the fit of the quadratic to the combined potential
+    #    if any([argv == 'axialfit' for argv in sys.argv]):
+    #        axialfit() # fit to the potential in the  axial direction 
+    #    if any([argv == 'vary' for argv in sys.argv]):
+    #        plotcvary() # Rbwl vs Cswl for different threshold conditions stringency
+       if any([argv == 'tweezer' for argv in sys.argv]):
+           plotTweezers() # figure showing the Rb and Cs potentials from tweezers
+       if any([argv == 'all' for argv in sys.argv]):
+           plotmerge()
+           plotTweezers()
+       plt.show()

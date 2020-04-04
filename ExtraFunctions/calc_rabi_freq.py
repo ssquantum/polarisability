@@ -6,7 +6,7 @@ import os
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 import sys
 sys.path.append(r'..')
-from AtomFieldInt_V3 import c, eps0, hbar, a0, e, Rb, Cs, wigner3j, wigner6j
+from AtomFieldInt_V3 import c, eps0, hbar, h, a0, e, Rb, Cs, wigner3j, wigner6j, dipole
 
 def singleRabi(dme, E, J, Jp, F, mf, Fp, mfp, I, q):
     return (-1)**(J+I+mf) * dme * np.sqrt((2*Fp+1)*(2*F+1)*(2*J+1)) *wigner6j(J, Jp, 1, Fp, F, I) *wigner3j(Fp, 1, F, mfp, -q, -mf) *E/hbar
@@ -51,7 +51,62 @@ print('Raman Rabi frequency: %.3g kHz'%(RabiFreq(Rb, power, waist, detun, 0.5, 1
 # RabiFreq(Cs, 117.3e-6, 80e-6, 2*np.pi*(c/8.52347065e-7-30e9), 0.5, 3,3, 4,4, 1,0)[0]/2/np.pi/1e3
 # for vals in RabiFreq(Rb, power, waist, detun, 0.5, 1,0, 2,0, 1,1)[1]:
 #     print(*vals)
-    
+
+# compare trapping frequencies and Rabi frequencies between Rb/Cs
+def wz(atom):
+    """Axial trapping freq"""
+    return np.sqrt(2*np.abs(atom.acStarkShift(0,0,0)/atom.m/atom.field.zR**2))
+
+def wr(atom):
+    """Radial trap freq"""
+    return np.sqrt(4*np.abs(atom.acStarkShift(0,0,0)/atom.m/atom.field.w0**2))
+
+rb5s = dipole(Rb.m, (0,1/2.,1,1), [814e-9, 1.46e-3, 1e-6],
+                    Rb.D0S, Rb.w0S, Rb.lwS, Rb.nljS,
+                    nuclear_spin = Rb.I,
+                    symbol=Rb.X)
+
+print(rb5s.acStarkShift(0,0,0)/h/1e6/20.7)
+cs6s = dipole(Cs.m, (0,1/2.,3,3), [940e-9, 5.02e-3, 1.1e-6],
+                    Cs.D0S, Cs.w0S, Cs.lwS, Cs.nljS,
+                    nuclear_spin = Cs.I,
+                    symbol=Cs.X)
+
+print(cs6s.acStarkShift(0,0,0)/h/1e6/20.7)
+
+print((wz(rb5s) / wz(cs6s))**2)
+wl =  780.241209686e-9 # wavelength of D2 line in m  852.347065e-9
+power = 100e-6 # in W
+waist = 100e-6 # in m
+
+
+# # calculate differential stark shifts for Raman transition
+# X = Rb
+# F, mF, Fp, mFp = 1, 1, 2, 2
+# wl =  780.241209686e-9 # wavelength of D2 line in m  852.347065e-9
+# power = 100e-6 # in W
+# waist = 100e-6 # in m
+# # lower hyperfine level of ground state
+# atom = dipole(X.m, (0,1/2.,F,mF), [wl, power, waist],
+#                     X.D0S, X.w0S, X.lwS, X.nljS,
+#                     nuclear_spin = X.I,
+#                     symbol=X.X)
+# # upper hyperfine level of ground state
+# atom2 = dipole(X.m, (0,1/2.,Fp,mFp), [wl, power, waist],
+#                     X.D0S, X.w0S, X.lwS, X.nljS,
+#                     nuclear_spin = X.I,
+#                     symbol=X.X)
+
+# for f in [30, 40, 48, 49, 50, 51, 52, 60]:
+#     detun = 2*np.pi*(c/wl - f*1e9)
+#     print(f)
+#     print('Raman Rabi frequency: %.3g kHz'%(RabiFreq(X, power, waist, detun, 0.5, F,mF, Fp,mFp, 1,0)[0] / 2/np.pi / 1e3)) 
+#     print('Scattering rate: %.3g /s'%(atom.scatRate(2*np.pi*c/detun)))
+#     shift = atom.acStarkShift(0,0,0,2*np.pi*c/detun, HF=True)/h/1e3
+#     print('AC Stark shift: %.3g kHz'%shift)
+#     a0, a1, _ = atom2.polarisability(2*np.pi*c/detun, HF=True,split=True)
+#     print('Differential Stark shift: %.3g kHz'%((shift*(a1 - atom.polarisability(2*np.pi*c/detun, HF=True,split=True)[1])/a0)))
+
 # lamb-dicke parameter 
 # momentum kick from perpendicular beams R1 + R2
 # n = np.sqrt(hbar / 2 / Rb.m / 2/np.pi/20e3) * 2*np.pi/780e-9
