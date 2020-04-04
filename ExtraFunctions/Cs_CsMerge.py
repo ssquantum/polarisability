@@ -31,9 +31,9 @@ afu = 2 * np.pi * 1e3 # convert from angular frequency to kHz
 
 Cswl = 938e-9      # wavelength of the Cs tweezer trap in m
 Rbwl = 938.1e-9       # wavelength of the Rb tweezer trap in m
-power = 2e-3*0.726       # power of Cs tweezer beam in W
+power = 1.895e-3*0.726       # power of Cs tweezer beam in W
 Cswaist = 1.1e-6    # beam waist for Cs in m
-Rbpower = power*0.1 # power of Rb tweezer beam in W 
+Rbpower = power*1.1 # power of Rb tweezer beam in W 
 Rbwaist = 1.1e-6    # beam waist fir Rb in m
 minU0 = -0.6e-3*kB  # min acceptable combined trap depth for Cs
 factorRb = 2        # how much deeper the Rb must be in its own trap
@@ -388,8 +388,8 @@ def plotmerge(n=3):
 def plotTweezers():
     """make a figure showing the Rb and Cs tweezer potentials side-by-side"""
     wid = max([Cswaist, Rbwaist])*1e6 # width of tweezer trap in microns
-    displacement=0.46#um
-    xs = np.linspace(-wid*3, wid*3, 200)    # positions along the beam axis in microns
+    displacement=0.01#um
+    xs = np.linspace(-wid*6, wid*6, 200)    # positions along the beam axis in microns
     URb = (Rb1064.acStarkShift((xs+displacement)*1e-6,0,0,mj=0)) /kB*1e3   # Rb potential in mK
     UCs = (Cs1064.acStarkShift(xs*1e-6,0,0,mj=0) )/kB*1e3   # Cs potential in mK
     both = np.concatenate((URb, UCs))
