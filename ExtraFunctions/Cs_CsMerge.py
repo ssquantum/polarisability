@@ -64,159 +64,159 @@ print("Rb tweezer wavelength: %.0f nm\t\tCs tweezer wavelength: %.0f nm\n"%(Rbwl
 #     )/ (Rb1064.polarisability(Rbwl, mj=0.5) - Cs1064.polarisability(Rbwl, mj=0.5)) * power
 
 # Stability condition 1: 
-def P1Rb(wlCs, wlRb, U0min=minU0, Cspower=power):
-    """Condition 1: The combined trap depth must be > 0.6mK for Cs."""
-    return abs((U0min*np.pi*eps0*c + Cs1064.polarisability(wlCs)*Cspower/Cswaist**2) 
-                    * Rbwaist**2 / Cs1064.polarisability(wlRb))
+# def P1Rb(wlCs, wlRb, U0min=minU0, Cspower=power):
+#     """Condition 1: The combined trap depth must be > 0.6mK for Cs."""
+#     return abs((U0min*np.pi*eps0*c + Cs1064.polarisability(wlCs)*Cspower/Cswaist**2) 
+#                     * Rbwaist**2 / Cs1064.polarisability(wlRb))
 
-# Stability condition 2: 
-def P2Rb(wlCs, wlRb, Cspower=power, fRb=factorRb):
-    """Condition 2: Rb is factor times more strongly attracted to its own tweezer"""
-    return fRb * Rb1064.polarisability(wlCs) * Cspower * Rbwaist**2 / Rb1064.polarisability(wlRb) / Cswaist**2
+# # Stability condition 2: 
+# def P2Rb(wlCs, wlRb, Cspower=power, fRb=factorRb):
+#     """Condition 2: Rb is factor times more strongly attracted to its own tweezer"""
+#     return fRb * Rb1064.polarisability(wlCs) * Cspower * Rbwaist**2 / Rb1064.polarisability(wlRb) / Cswaist**2
 
-# Stability condition 3:
-def P3Rb(wlCs, wlRb, Cspower=power, fCs=factorCs):
-    """Condition 3: Cs is factor times more strongly attracted to its own tweezer"""
-    return abs(Cs1064.polarisability(wlCs) * Cspower * Rbwaist**2 / Cs1064.polarisability(wlRb) / Cswaist**2 / fCs)
+# # Stability condition 3:
+# def P3Rb(wlCs, wlRb, Cspower=power, fCs=factorCs):
+#     """Condition 3: Cs is factor times more strongly attracted to its own tweezer"""
+#     return abs(Cs1064.polarisability(wlCs) * Cspower * Rbwaist**2 / Cs1064.polarisability(wlRb) / Cswaist**2 / fCs)
 
-print("""Condition 1: The combined trap depth must be > %.2f mK for Cs.
-Power ratio Rb / Cs < %.3g """%(minU0/kB*1e3, P1Rb(Cswl, Rbwl, Cspower=power) / power))
-print("Condition 2: Rb is "+str(factorRb)+"""x more strongly attracted to its own tweezer.
-Power ratio Rb / Cs > %.3g \n"""%(P2Rb(Cswl, Rbwl, power) / power))
-print("Condition 3: Cs is "+str(factorCs)+"""x more strongly attracted to its own tweezer.
-Power ratio Rb / Cs < %.3g \n"""%(P3Rb(Cswl, Rbwl, power) / power))
+# print("""Condition 1: The combined trap depth must be > %.2f mK for Cs.
+# Power ratio Rb / Cs < %.3g """%(minU0/kB*1e3, P1Rb(Cswl, Rbwl, Cspower=power) / power))
+# print("Condition 2: Rb is "+str(factorRb)+"""x more strongly attracted to its own tweezer.
+# Power ratio Rb / Cs > %.3g \n"""%(P2Rb(Cswl, Rbwl, power) / power))
+# print("Condition 3: Cs is "+str(factorCs)+"""x more strongly attracted to its own tweezer.
+# Power ratio Rb / Cs < %.3g \n"""%(P3Rb(Cswl, Rbwl, power) / power))
 
-print("Combine all 3 conditions to fix Cspower and then get limits on Rbpower:\n")
-Cspowermin = factorCs*abs(minU0) * np.pi*eps0*c * Cswaist**2 / Cs1064.polarisability(Cswl)
-print("Cs power > %.3g mW"%(Cspowermin*1e3))
+# print("Combine all 3 conditions to fix Cspower and then get limits on Rbpower:\n")
+# Cspowermin = factorCs*abs(minU0) * np.pi*eps0*c * Cswaist**2 / Cs1064.polarisability(Cswl)
+# print("Cs power > %.3g mW"%(Cspowermin*1e3))
 
-def getPRbmin(wlCs, wlRb, U0min=minU0, Cspower=power):
-    """Combine conditions 1, 2, and 3 to get the min Rb tweezer power"""
-    return factorRb*factorCs *Rb1064.polarisability(wlCs)/Rb1064.polarisability(wlRb)/Cs1064.polarisability(wlCs) * abs(U0min)*np.pi*eps0*c*Rbwaist**2
+# def getPRbmin(wlCs, wlRb, U0min=minU0, Cspower=power):
+#     """Combine conditions 1, 2, and 3 to get the min Rb tweezer power"""
+#     return factorRb*factorCs *Rb1064.polarisability(wlCs)/Rb1064.polarisability(wlRb)/Cs1064.polarisability(wlCs) * abs(U0min)*np.pi*eps0*c*Rbwaist**2
 
-def getPRbmax(wlCs, wlRb, U0min=minU0, Cspower=power):
-    """Combine conditions 1, 2, and 3 to get the max Rb tweezer power"""
-    return factorCs/factorRb * Rbwaist**2 * abs(U0min / Cs1064.polarisability(wlRb)) * np.pi*eps0*c
+# def getPRbmax(wlCs, wlRb, U0min=minU0, Cspower=power):
+#     """Combine conditions 1, 2, and 3 to get the max Rb tweezer power"""
+#     return factorCs/factorRb * Rbwaist**2 * abs(U0min / Cs1064.polarisability(wlRb)) * np.pi*eps0*c
+
+# # get the stability conditions as a function of wavelength
+# ratio1 = P1Rb(Cswl, wavels, Cspower=power)/power # condition 1
+# ratio2 = P2Rb(Cswl, wavels, Cspower=power)/power # condition 2
+# ratio3 = P3Rb(Cswl, wavels, Cspower=power)/power # condition 3
+# diff1 = abs(ratio2 - ratio1)
+# diff2 = abs(ratio3 - ratio2)
+# crossover = wavels[np.argmin(diff1)] # wavelength where ratio1 crosses ratio2
+# # print("Stability conditions 1 and 2 crossover at %.1f nm\n"%(crossover*1e9))
+# crossover2 = wavels[np.argmin(diff2)] # wavelength where ratio2 crosses ratio3
+# # print("Stability conditions 1 and 2 crossover at %.1f nm\n"%(crossover2*1e9))
+# both = np.concatenate((ratio1, ratio2))
+
+# def plotc12():
+#     """plot the stability conditions as a function of wavelength for
+#     conditions 1 and 2"""
+#     plt.figure()
+#     plt.title('Threshold Conditions on Power Ratio $P_{Rb}/P_{Cs}$')
+#     plt.plot(wavels*1e9, ratio1, color=default_colours.DUsea_blue, 
+#         label='Upper Limit from $U_{Cs}$ < -0.6 mK')
+#     plt.plot(wavels*1e9, ratio2, color=default_colours.DUcherry_red,
+#         label='Lower Limit from $U_{Rb}(\lambda) > %s U_{Rb}$(%.0f nm)'%(factorRb, Cswl*1e9)) 
+#     plt.fill_between(wavels*1e9, 0, ratio2, color='tab:red', alpha=0.2) # bottom region red
+#     plt.fill_between(wavels*1e9, ratio1, max(both), color='tab:red', alpha=0.2) # top region red
+#     plt.fill_between(wavels[:np.argmin(diff1)]*1e9, ratio2[:np.argmin(diff1)], # between curves green
+#                             ratio1[:np.argmin(diff1)], color='tab:green', alpha=0.2)
+#     plt.xlabel('Rb Tweezer Wavelength (nm)')
+#     plt.ylabel('Power Ratio $P_{Rb}/P_{Cs}$')
+#     plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
+#     plt.ylim(min(ratio2), max(ratio1))
+#     plt.text(812, max(ratio2)*0.25, 'Upper limit at %.0f nm: %.3g'%(Rbwl*1e9, P1Rb(Cswl,Rbwl)/power),
+#         color=default_colours.DUsea_blue, bbox=dict(facecolor='white', edgecolor=None))
+#     plt.text(812, max(ratio2)*0.21, 'Lower limit at %.0f nm: %.3g'%(Rbwl*1e9, P2Rb(Cswl,Rbwl)/power),
+#         color=default_colours.DUcherry_red, bbox=dict(facecolor='white', edgecolor=None))
+#     plt.legend()
+
+
+# def plotc23(fCs=factorCs, fRb=factorRb, p=power, ls='ko', label='', newfig=True):
+#     """plot the stability conditions as a function of wavelength for
+#     conditions 2 and 3"""
+#     Cswavels = np.linspace(910, 1070, 30)*1e-9 # Cs wavelengths in m
+#     crosswls = np.zeros(len(Cswavels))
+#     for i in range(len(Cswavels)):
+#         r2 = P2Rb(Cswavels[i], wavels, Cspower=p, fRb=fRb) # condition 2
+#         r3 = P3Rb(Cswavels[i], wavels, Cspower=p, fCs=fCs) # condition 3
+#         d2 = abs(r3 - r2)
+#         crosswls[i] = wavels[np.argmin(d2)] # crossover wavelength in m
+#     # since search for crossover wavelength is discretised, only take unique values
+#     # note that this will look disjointed unless crosswls has very small divisions
+#     crosswls, idx, occ = np.unique(crosswls, return_index=True, return_counts=True)
+#     Cswavels = Cswavels[idx + occ//2] # take the middle value when there are multiple occurences
+#     # plot the results
+#     if newfig:
+#         plt.figure()
+#         # plt.title('Threshold conditions on Rb tweezer wavelength')
+#         plt.xlabel('Cs tweezer wavelength (nm)')
+#         plt.ylabel('Maximum Rb tweezer wavelength (nm)')
+#         plt.xlim((min(Cswavels)*1e9, max(Cswavels)*1e9))
+#     plt.plot(Cswavels*1e9, crosswls*1e9, ls, label=label)
+#     return Cswavels, crosswls
+
+
+# def plotcvary():
+#     """Vary the factors in the stability conditions to see how the plot of 
+#     max Rb tweezer wavelength against Cs tweezer wavelength varies"""
+#     # csfactors = [2,1.5,2,1.5]
+#     # rbfactors = [2,2,1.5,1.5]
+#     # labels = ['$f_{Cs}=%s, f_{Rb}=%s$'%(csfactors[i],rbfactors[i]) for i in range(len(csfactors))]
+#     factors = np.array([5, 4, 3, 2])
+#     # labels = ['$f_{Cs} \cdot f_{Rb}=%s$'%f for f in factors]
+#     gCs = (factors**0.5 - 1)/factors**0.5
+#     gRb = (factors**0.5 + 1)/factors**0.5
+#     labels = ['$g_{Cs} =%.2g$'%g for g in gCs]
+#     linestyles = ['r', 'k', 'g', 'm']
+#     plt.figure()
+#     # plt.title('Vary the required ratio between trap depths')
+#     plt.xlabel('Cs Tweezer Wavelength (nm)')
+#     plt.ylabel('Maximum Rb Tweezer Wavelength (nm)')
+#     results = []
+#     for i in range(len(labels)):
+#         results.append(plotc23(fCs=factors[i]**0.5, fRb=factors[i]**0.5, ls=linestyles[i], 
+#                     label=labels[i], newfig=False))
+#     plt.legend()
+#     return results
+
+
 
 # get the stability conditions as a function of wavelength
-ratio1 = P1Rb(Cswl, wavels, Cspower=power)/power # condition 1
-ratio2 = P2Rb(Cswl, wavels, Cspower=power)/power # condition 2
-ratio3 = P3Rb(Cswl, wavels, Cspower=power)/power # condition 3
-diff1 = abs(ratio2 - ratio1)
-diff2 = abs(ratio3 - ratio2)
-crossover = wavels[np.argmin(diff1)] # wavelength where ratio1 crosses ratio2
-# print("Stability conditions 1 and 2 crossover at %.1f nm\n"%(crossover*1e9))
-crossover2 = wavels[np.argmin(diff2)] # wavelength where ratio2 crosses ratio3
-# print("Stability conditions 1 and 2 crossover at %.1f nm\n"%(crossover2*1e9))
-both = np.concatenate((ratio1, ratio2))
+# PRbmin = getPRbmin(Cswl, wavels, Cspower=Cspowermin) # in W
+# PRbmax = getPRbmax(Cswl, wavels, Cspower=Cspowermin) # in W
+# diff = abs(PRbmin - PRbmax)
+# idiff = np.argmin(diff)   # index where PRbmin crosses PRbmax
+# crossover = wavels[idiff] # wavelength where PRbmin crosses PRbmax
+# print("Combined stability conditions crossover at %.1f nm\n"%(crossover*1e9))
+# both = np.concatenate((PRbmin, PRbmax))*1e3 # in mW
 
-def plotc12():
-    """plot the stability conditions as a function of wavelength for
-    conditions 1 and 2"""
-    plt.figure()
-    plt.title('Threshold Conditions on Power Ratio $P_{Rb}/P_{Cs}$')
-    plt.plot(wavels*1e9, ratio1, color=default_colours.DUsea_blue, 
-        label='Upper Limit from $U_{Cs}$ < -0.6 mK')
-    plt.plot(wavels*1e9, ratio2, color=default_colours.DUcherry_red,
-        label='Lower Limit from $U_{Rb}(\lambda) > %s U_{Rb}$(%.0f nm)'%(factorRb, Cswl*1e9)) 
-    plt.fill_between(wavels*1e9, 0, ratio2, color='tab:red', alpha=0.2) # bottom region red
-    plt.fill_between(wavels*1e9, ratio1, max(both), color='tab:red', alpha=0.2) # top region red
-    plt.fill_between(wavels[:np.argmin(diff1)]*1e9, ratio2[:np.argmin(diff1)], # between curves green
-                            ratio1[:np.argmin(diff1)], color='tab:green', alpha=0.2)
-    plt.xlabel('Rb Tweezer Wavelength (nm)')
-    plt.ylabel('Power Ratio $P_{Rb}/P_{Cs}$')
-    plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
-    plt.ylim(min(ratio2), max(ratio1))
-    plt.text(812, max(ratio2)*0.25, 'Upper limit at %.0f nm: %.3g'%(Rbwl*1e9, P1Rb(Cswl,Rbwl)/power),
-        color=default_colours.DUsea_blue, bbox=dict(facecolor='white', edgecolor=None))
-    plt.text(812, max(ratio2)*0.21, 'Lower limit at %.0f nm: %.3g'%(Rbwl*1e9, P2Rb(Cswl,Rbwl)/power),
-        color=default_colours.DUcherry_red, bbox=dict(facecolor='white', edgecolor=None))
-    plt.legend()
-
-
-def plotc23(fCs=factorCs, fRb=factorRb, p=power, ls='ko', label='', newfig=True):
-    """plot the stability conditions as a function of wavelength for
-    conditions 2 and 3"""
-    Cswavels = np.linspace(910, 1070, 30)*1e-9 # Cs wavelengths in m
-    crosswls = np.zeros(len(Cswavels))
-    for i in range(len(Cswavels)):
-        r2 = P2Rb(Cswavels[i], wavels, Cspower=p, fRb=fRb) # condition 2
-        r3 = P3Rb(Cswavels[i], wavels, Cspower=p, fCs=fCs) # condition 3
-        d2 = abs(r3 - r2)
-        crosswls[i] = wavels[np.argmin(d2)] # crossover wavelength in m
-    # since search for crossover wavelength is discretised, only take unique values
-    # note that this will look disjointed unless crosswls has very small divisions
-    crosswls, idx, occ = np.unique(crosswls, return_index=True, return_counts=True)
-    Cswavels = Cswavels[idx + occ//2] # take the middle value when there are multiple occurences
-    # plot the results
-    if newfig:
-        plt.figure()
-        # plt.title('Threshold conditions on Rb tweezer wavelength')
-        plt.xlabel('Cs tweezer wavelength (nm)')
-        plt.ylabel('Maximum Rb tweezer wavelength (nm)')
-        plt.xlim((min(Cswavels)*1e9, max(Cswavels)*1e9))
-    plt.plot(Cswavels*1e9, crosswls*1e9, ls, label=label)
-    return Cswavels, crosswls
-
-
-def plotcvary():
-    """Vary the factors in the stability conditions to see how the plot of 
-    max Rb tweezer wavelength against Cs tweezer wavelength varies"""
-    # csfactors = [2,1.5,2,1.5]
-    # rbfactors = [2,2,1.5,1.5]
-    # labels = ['$f_{Cs}=%s, f_{Rb}=%s$'%(csfactors[i],rbfactors[i]) for i in range(len(csfactors))]
-    factors = np.array([5, 4, 3, 2])
-    # labels = ['$f_{Cs} \cdot f_{Rb}=%s$'%f for f in factors]
-    gCs = (factors**0.5 - 1)/factors**0.5
-    gRb = (factors**0.5 + 1)/factors**0.5
-    labels = ['$g_{Cs} =%.2g$'%g for g in gCs]
-    linestyles = ['r', 'k', 'g', 'm']
-    plt.figure()
-    # plt.title('Vary the required ratio between trap depths')
-    plt.xlabel('Cs Tweezer Wavelength (nm)')
-    plt.ylabel('Maximum Rb Tweezer Wavelength (nm)')
-    results = []
-    for i in range(len(labels)):
-        results.append(plotc23(fCs=factors[i]**0.5, fRb=factors[i]**0.5, ls=linestyles[i], 
-                    label=labels[i], newfig=False))
-    plt.legend()
-    return results
-
-
-
-# get the stability conditions as a function of wavelength
-PRbmin = getPRbmin(Cswl, wavels, Cspower=Cspowermin) # in W
-PRbmax = getPRbmax(Cswl, wavels, Cspower=Cspowermin) # in W
-diff = abs(PRbmin - PRbmax)
-idiff = np.argmin(diff)   # index where PRbmin crosses PRbmax
-crossover = wavels[idiff] # wavelength where PRbmin crosses PRbmax
-print("Combined stability conditions crossover at %.1f nm\n"%(crossover*1e9))
-both = np.concatenate((PRbmin, PRbmax))*1e3 # in mW
-
-def plotc123(Cspower=Cspowermin):
-    """plot the combined stability conditions as a function of wavelength"""
-    plt.figure()
-    plt.title('Threshold Conditions on $P_{Rb}$ when $P_{Cs}$ = %.3g mW'%(Cspower*1e3))
-    plt.plot(wavels*1e9, PRbmax*1e3, color=default_colours.DUsea_blue, label='Maximum power')
-    plt.plot(wavels*1e9, PRbmin*1e3, color=default_colours.DUcherry_red, label='Minimum power') 
-    plt.fill_between(wavels*1e9, 0, PRbmin*1e3, color='tab:red', alpha=0.2) # bottom region red
-    plt.fill_between(wavels[:idiff]*1e9, PRbmax[:idiff]*1e3, 
-                    max(both), color='tab:red', alpha=0.2) # top left region red
-    plt.fill_between(wavels[idiff:]*1e9, PRbmin[idiff:]*1e3, 
-                    max(both), color='tab:red', alpha=0.2) # top right region red
-    plt.fill_between(wavels[:idiff]*1e9, PRbmin[:idiff]*1e3, # between curves green
-                            PRbmax[:idiff]*1e3, color='tab:green', alpha=0.2)
-    plt.xlabel('Rb Tweezer Wavelength (nm)')
-    plt.ylabel('Rb tweezer beam power $P_{Rb}$ (mW)')
-    plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
-    plt.ylim(min(PRbmin), max(PRbmax)*1.5e3)
-    plt.text(crossover*1e9, max(PRbmax)*0.24*1e3, 'Upper limit at %.0f nm: %.3g mW'%(Rbwl*1e9, 
-        getPRbmax(Cswl, Rbwl, Cspower=Cspower)*1e3),
-        color=default_colours.DUsea_blue, bbox=dict(facecolor='white', edgecolor=None))
-    plt.text(crossover*1e9, max(PRbmax)*0.1*1e3, 'Lower limit at %.0f nm: %.3g mW'%(Rbwl*1e9, 
-        getPRbmin(Cswl, Rbwl, Cspower=Cspower)*1e3),
-        color=default_colours.DUcherry_red, bbox=dict(facecolor='white', edgecolor=None))
-    plt.legend()
+# def plotc123(Cspower=Cspowermin):
+#     """plot the combined stability conditions as a function of wavelength"""
+#     plt.figure()
+#     plt.title('Threshold Conditions on $P_{Rb}$ when $P_{Cs}$ = %.3g mW'%(Cspower*1e3))
+#     plt.plot(wavels*1e9, PRbmax*1e3, color=default_colours.DUsea_blue, label='Maximum power')
+#     plt.plot(wavels*1e9, PRbmin*1e3, color=default_colours.DUcherry_red, label='Minimum power') 
+#     plt.fill_between(wavels*1e9, 0, PRbmin*1e3, color='tab:red', alpha=0.2) # bottom region red
+#     plt.fill_between(wavels[:idiff]*1e9, PRbmax[:idiff]*1e3, 
+#                     max(both), color='tab:red', alpha=0.2) # top left region red
+#     plt.fill_between(wavels[idiff:]*1e9, PRbmin[idiff:]*1e3, 
+#                     max(both), color='tab:red', alpha=0.2) # top right region red
+#     plt.fill_between(wavels[:idiff]*1e9, PRbmin[:idiff]*1e3, # between curves green
+#                             PRbmax[:idiff]*1e3, color='tab:green', alpha=0.2)
+#     plt.xlabel('Rb Tweezer Wavelength (nm)')
+#     plt.ylabel('Rb tweezer beam power $P_{Rb}$ (mW)')
+#     plt.xlim(wavels[0]*1e9, wavels[-1]*1e9)
+#     plt.ylim(min(PRbmin), max(PRbmax)*1.5e3)
+#     plt.text(crossover*1e9, max(PRbmax)*0.24*1e3, 'Upper limit at %.0f nm: %.3g mW'%(Rbwl*1e9, 
+#         getPRbmax(Cswl, Rbwl, Cspower=Cspower)*1e3),
+#         color=default_colours.DUsea_blue, bbox=dict(facecolor='white', edgecolor=None))
+#     plt.text(crossover*1e9, max(PRbmax)*0.1*1e3, 'Lower limit at %.0f nm: %.3g mW'%(Rbwl*1e9, 
+#         getPRbmin(Cswl, Rbwl, Cspower=Cspower)*1e3),
+#         color=default_colours.DUcherry_red, bbox=dict(facecolor='white', edgecolor=None))
+#     plt.legend()
 
 
 # for the 880nm trap:
@@ -334,56 +334,34 @@ Caesium:        trap depth %.3g mK, scattering rate %.3g Hz
                 wrRb880/afu, getLD(Rb880, wrRb880), Cs880.acStarkShift(0,0,0,mj=0)/kB*1e3, 
                 Cs880.scatRate(), wrCs880/afu, getLD(Cs880, wrCs880)))
 
-def plotmerge(n=3):
+def plotmerge(n=3, minU0=-1.5, maxU0=0.1, highlight=True):
     """plot merging traps with n timesteps"""
     sep = np.linspace(0, max([Cswaist,Rbwaist])*2, n)     # initial separation of the tweezer traps
     xs = np.linspace(-max(sep)*0.5, max(sep)*1.5, 200)    # positions along the beam axis
-
-    for atoms in [[Rb1064, wrRb], [Cs1064, wrCs]]:
+    for atoms in [[Rb1064, Rb880], [Cs1064, Cs880]]:
         plt.figure(figsize=(6,7.5))
         for i in range(n):
             ax = plt.subplot2grid((n,1), (i,0))
-            if atoms[0].X == 'Rb':
-                minU0 = (atoms[0].acStarkShift(0,0,0,mj=0) + atoms[1].acStarkShift(0,0,0,mj=0))/kB*1.1e3
-                maxU0 = 0.16
-            elif atoms[0].X=='Cs':
-                minU0 = atoms[0].acStarkShift(0,0,0,mj=0)/kB*1.1e3
-                maxU0 = atoms[1].acStarkShift(0,0,0,mj=0)/kB*1.1e3
-            # combined potential along the beam axis:
             U = (atoms[0].acStarkShift(xs,0,0,mj=0) + atoms[1].acStarkShift(xs-sep[n-i-1],0,0,mj=0))/kB*1e3 
             U1064 = atoms[0].acStarkShift(xs,0,0,mj=0)/kB*1e3         # potential in the 1064 trap
+            U880 = atoms[1].acStarkShift(xs-sep[n-i-1],0,0,mj=0)/kB*1e3 # potential in the 880 trap
             plt.plot(xs*1e6, U, 'k')
             plt.plot(xs*1e6, U1064, color=default_colours.DUcherry_red, alpha=0.6)
-            plt.plot([0]*2, [minU0,maxU0], color=default_colours.DUcherry_red, linewidth=10, label='%.0f'%(Cswl*1e9), alpha=0.4)
-            plt.plot([sep[n-i-1]*1e6]*2, [minU0,maxU0], color=default_colours.DUsea_blue, linewidth=10, label='%.0f'%(Rbwl*1e9), alpha=0.4)
+            plt.plot(xs*1e6, U880, color=default_colours.DUsea_blue, alpha=0.6)
+            if highlight:
+                plt.plot([0]*2, [minU0,maxU0], color=default_colours.DUcherry_red, linewidth=10, label='%.0f'%(Cswl*1e9), alpha=0.4)
+                plt.plot([sep[n-i-1]*1e6]*2, [minU0,maxU0], color=default_colours.DUsea_blue, linewidth=10, label='%.0f'%(Rbwl*1e9), alpha=0.4)
             ax.set_xticks([])
             ax.set_ylim((minU0,maxU0))
             ax.set_xlim((xs[0]*1e6, xs[-1]*1e6))
-            # ax.set_yticks([])
-            
-
-            if i == 0:
-                if atoms[0].X == 'Rb':
-                    ax.set_title('a)')
-                elif atoms[0].X == 'Cs':
-                    ax.set_title('b)')
-        #         ax.set_title("Optical potential experienced by "+atoms[0].X
-        # +"\n%.0f beam power: %.3g mW   %.0f beam power: %.3g mW"%(Cswl*1e9, power*1e3, Rbwl*1e9, Rbpower*1e3),
-        #             pad = 30)
-                plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
-                # ax.text(xs[0]*1e6, 0, '$\omega/2\pi = %.0f$ kHz'%(trap_freq(atoms[0])/afu), 
-                #                                         bbox=dict(facecolor='white', edgecolor=None))
-                # ax.text(sep[-1]*1e6,0,'$\omega/2\pi = %.0f$ kHz'%(trap_freq(atoms[1])/afu), 
-                #                                         bbox=dict(facecolor='white', edgecolor=None))
-        
-            
-        plt.xlabel(r'Position ($\mu$m)')
-        ax.set_xticks(sep*1e6)
-        plt.ylabel('Trap Depth (mK)')
-        # ax.text(xs[0]*1e6, 0, '$\omega/2\pi = %.0f$ kHz'%atoms[2], bbox=dict(facecolor='white', edgecolor=None))
-        ax.yaxis.set_major_locator(AutoLocator())
-        plt.tight_layout()
-        plt.subplots_adjust(hspace=0.02)
+        if i == 0:
+            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+    plt.xlabel(r'Position ($\mu$m)')
+    ax.set_xticks(sep*1e6)
+    plt.ylabel('Trap Depth (mK)')
+    ax.yaxis.set_major_locator(AutoLocator())
+    plt.tight_layout()
+    plt.subplots_adjust(hspace=0.02)
 
 def plotTweezers():
     """make a figure showing the Rb and Cs tweezer potentials side-by-side"""
@@ -408,63 +386,54 @@ def plotTweezers():
     plt.xlim((min(xs), max(xs)))
     plt.tight_layout()
 
-def plotcross12():
-    """Use conditions 1 and 2 to find the maximum Rb tweezer wavelength as a 
-    function of Cs beam power"""
-    wavels = np.linspace(800, 830, 100) * 1e-9 # wavelengths to consider in m
-    crossovers = []
-    pratio     = []
-    powers = np.linspace(7,20,50)*1e-3
-    for p in powers:
-        ratio1 = P1Rb(Cswl, wavels, Cspower=p)/p # condition 1
-        ratio2 = P2Rb(Cswl, wavels, Cspower=p)/p # condition 2
-        diff = abs(ratio2 - ratio1)
-        crossovers.append(wavels[np.argmin(diff)]) # wavelength where ratio1 crosses ratio2
-        pratio.append(P1Rb(Cswl, wavels[np.argmin(diff)], Cspower=p)/p) # power ratio at crossover
+# def plotcross12():
+#     """Use conditions 1 and 2 to find the maximum Rb tweezer wavelength as a 
+#     function of Cs beam power"""
+#     wavels = np.linspace(800, 830, 100) * 1e-9 # wavelengths to consider in m
+#     crossovers = []
+#     pratio     = []
+#     powers = np.linspace(7,20,50)*1e-3
+#     for p in powers:
+#         ratio1 = P1Rb(Cswl, wavels, Cspower=p)/p # condition 1
+#         ratio2 = P2Rb(Cswl, wavels, Cspower=p)/p # condition 2
+#         diff = abs(ratio2 - ratio1)
+#         crossovers.append(wavels[np.argmin(diff)]) # wavelength where ratio1 crosses ratio2
+#         pratio.append(P1Rb(Cswl, wavels[np.argmin(diff)], Cspower=p)/p) # power ratio at crossover
 
-    fig, ax1 = plt.subplots()
-    ax1.plot(powers*1e3, np.array(crossovers)*1e9, 'ko')
-    ax1.set_xlabel('Cs beam power (mW)')
-    ax1.set_ylabel('Crossover wavelength (nm)')
+#     fig, ax1 = plt.subplots()
+#     ax1.plot(powers*1e3, np.array(crossovers)*1e9, 'ko')
+#     ax1.set_xlabel('Cs beam power (mW)')
+#     ax1.set_ylabel('Crossover wavelength (nm)')
 
-    ax2 = ax1.twinx()
-    ax2.plot(powers*1e3, pratio, 'x', color='tab:red') # power ratios at the crossover wavelength
-    ax2.set_ylabel('Power ratio ($P_{Rb}/P_{Cs}$)', color='tab:red')
-    ax2.tick_params(axis='y', labelcolor='tab:red')
+#     ax2 = ax1.twinx()
+#     ax2.plot(powers*1e3, pratio, 'x', color='tab:red') # power ratios at the crossover wavelength
+#     ax2.set_ylabel('Power ratio ($P_{Rb}/P_{Cs}$)', color='tab:red')
+#     ax2.tick_params(axis='y', labelcolor='tab:red')
 
 
 if __name__ == "__main__":
     # only plot if the user passes a second argument, this acts like verbosity level
     # e.g. python CombinedTrap.py 1
-#    if np.size(sys.argv) > 1:
-#        if any([argv == '12' for argv in sys.argv]):
-#            plotc12() # threshold conditions 1 and 2
-#        if any([argv == '23' for argv in sys.argv]):
-#            plotc23() # Rbwl vs Cswl from threshold conditions 2 and 3
-#        if any([argv == '123' for argv in sys.argv]):
-#            plotc123() # PRb vs wavelength from all threshold conditions
-#        if any([argv == 'merge' for argv in sys.argv]):
-#            plotmerge() # merging tweezers
-#        if any([argv == 'cross12' for argv in sys.argv]):
-#            plotcross12() # Rbwl vs PCs from threshold conditions 2 and 3
-#        if any([argv == 'checkfit' for argv in sys.argv]):
-#            checkfit() # Check the fit of the quadratic to the combined potential
-#        if any([argv == 'axialfit' for argv in sys.argv]):
-#            axialfit() # fit to the potential in the  axial direction 
-#        if any([argv == 'vary' for argv in sys.argv]):
-#            plotcvary() # Rbwl vs Cswl for different threshold conditions stringency
-#        if any([argv == 'tweezer' for argv in sys.argv]):
-#            plotTweezers() # figure showing the Rb and Cs potentials from tweezers
-#        if any([argv == 'all' for argv in sys.argv]):
-#            # plotc12()
-#            # plotc23()
-#            plotcvary()
-#            checkfit()
-#            axialfit()
-#            plotc123()
-#            plotmerge()
-#            plotcross12()
-#        plt.show()
-    plt.clf()
-    plotTweezers()
-    plt.show()
+   if np.size(sys.argv) > 1:
+    #    if any([argv == '12' for argv in sys.argv]):
+    #        plotc12() # threshold conditions 1 and 2
+    #    if any([argv == '23' for argv in sys.argv]):
+    #        plotc23() # Rbwl vs Cswl from threshold conditions 2 and 3
+    #    if any([argv == '123' for argv in sys.argv]):
+    #        plotc123() # PRb vs wavelength from all threshold conditions
+       if any([argv == 'merge' for argv in sys.argv]):
+           plotmerge() # merging tweezers
+    #    if any([argv == 'cross12' for argv in sys.argv]):
+    #        plotcross12() # Rbwl vs PCs from threshold conditions 2 and 3
+    #    if any([argv == 'checkfit' for argv in sys.argv]):
+    #        checkfit() # Check the fit of the quadratic to the combined potential
+    #    if any([argv == 'axialfit' for argv in sys.argv]):
+    #        axialfit() # fit to the potential in the  axial direction 
+    #    if any([argv == 'vary' for argv in sys.argv]):
+    #        plotcvary() # Rbwl vs Cswl for different threshold conditions stringency
+       if any([argv == 'tweezer' for argv in sys.argv]):
+           plotTweezers() # figure showing the Rb and Cs potentials from tweezers
+       if any([argv == 'all' for argv in sys.argv]):
+           plotmerge()
+           plotTweezers()
+       plt.show()
