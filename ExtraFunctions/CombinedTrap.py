@@ -23,6 +23,7 @@ sys.path.append('..')
 # use JQC official colour scheme
 sys.path.append(r'Z:\Tweezer\People\Vincent\python snippets\plotting_tools')
 sys.path.append(r'Y:\Tweezer\People\Vincent\python snippets\plotting_tools')
+sys.path.append(r'Y:\Tweezer\Code\Python 3.5\polarisability')
 import default_colours
 from AtomFieldInt_V3 import (dipole, Rb, Cs, c, eps0, h, hbar, a0, e, me, 
     kB, amu, Eh, au)
