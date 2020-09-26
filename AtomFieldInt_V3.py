@@ -291,10 +291,12 @@ class dipole:
             self.Isats = np.array([24.981, 11.023]) # saturation intensities for D1, D2 transitions
             self.Dlws = np.array([Cs.lwS[0], Cs.lwS[35]]) # linewidths for D1, D2 lines
             self.Drws = np.array([Cs.rwS[0], Cs.rwS[35]]) # resonant wavelengths of D1, D2 lines
+            self.Dw0s = np.array([Cs.w0S[0], Cs.w0S[35]]) # resonant frequencies of D1, D2 lines
         elif symbol == 'Rb':
             self.Isats = np.array([44.84, 25.03])   # saturation intensities for D1, D2 transitions
             self.Dlws = np.array([Rb.lwS[0], Rb.lwS[5]]) # linewidths for D1, D2 lines
             self.Drws = np.array([Rb.rwS[0], Rb.rwS[5]]) # resonant wavelengths of D1, D2 lines
+            self.Dw0s = np.array([Rb.w0S[0], Rb.w0S[5]]) # resonant wavelengths of D1, D2 lines
         
         self.states = transition_labels                 # (n,l,j) quantum numbers for transitions
         self.omega0 = np.array(resonant_frequencies)    # resonant frequencies (rad/s)
@@ -302,10 +304,12 @@ class dipole:
         self.D0s   = np.array(dipole_matrix_elements)   # D0 = -e <a|r|b> for displacement r along the polarization direction
         self.omegas = np.array(2*np.pi*c/self.field.lam)# laser frequencies (rad/s)
         
-    def scatRate(self, wavel=[], I=[]):
+    def scatRate(self, wavel=[], I=[], delta=[]):
         """Return the scattering rate at a given wavelength and intensity
         Default uses the dipole object's wavelength and intensity
-        If wavelength and intensity are supplied, they should be the same length."""
+        If wavelength and intensity are supplied, they should be the same length.
+        Alternatively, supply the detuning from the D2 line, delta
+        The returned scattering rate has units of rad/s."""
         if np.size(wavel) != 0: 
             omegas = np.array(2*np.pi*c/wavel) # laser frequencies (rad/s)
         else:
@@ -314,9 +318,15 @@ class dipole:
             I = 2 * self.field.P / np.pi / self.field.w0**2 # beam intensity
 
         Rsc = 0
-        for i in range(len(self.Isats)):
-            deltas = omegas - 2 * np.pi * c / self.Drws[i] # detuning from D line
-            Rsc += self.Dlws[i]/2. * I/self.Isats[i] / (1 + 4*(deltas/self.Dlws[i])**2 + I/self.Isats[i])
+        if np.size(delta) != 0: # use supplied detuning
+            delta = np.array(delta)
+            for i in range(len(self.Isats)):
+                deltas = delta if i else delta + self.Dw0s[1] - self.Dw0s[0]
+                Rsc += self.Dlws[i]/2. * I/self.Isats[i] / (1 + 4*(deltas/self.Dlws[i])**2 + I/self.Isats[i])
+        else: # use difference between wavelength and resonant wavelength
+            for i in range(len(self.Isats)):
+                deltas = omegas - 2 * np.pi * c / self.Drws[i] # detuning from D line
+                Rsc += self.Dlws[i]/2. * I/self.Isats[i] / (1 + 4*(deltas/self.Dlws[i])**2 + I/self.Isats[i])
 
         return Rsc
             
