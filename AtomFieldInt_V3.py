@@ -288,7 +288,7 @@ class dipole:
         self.field = Gauss(*field_properties)                  # combines all properties of the field
         self.X = symbol
         if symbol == 'Cs':
-            self.Isats = np.array([24.981, 11.023]) # saturation intensities for D1, D2 transitions
+            self.Isats = np.array([25.055, 16.573]) # saturation intensities for D1, D2 transitions, pi polarised
             self.Dlws = np.array([Cs.lwS[0], Cs.lwS[35]]) # linewidths for D1, D2 lines
             self.Drws = np.array([Cs.rwS[0], Cs.rwS[35]]) # resonant wavelengths of D1, D2 lines
             self.Dw0s = np.array([Cs.w0S[0], Cs.w0S[35]]) # resonant frequencies of D1, D2 lines
@@ -1077,7 +1077,7 @@ if __name__ == "__main__":
         runGUI()
         sys.exit() # don't run any of the other code below
         
-    vmfSS('Rb')
+    # vmfSS('Rb')
 
     # combinedTrap(Cswl = 1064e-9, # wavelength of the Cs tweezer trap in m
     #             Rbwl = 810e-9, # wavelength of the Rb tweezer trap in m
